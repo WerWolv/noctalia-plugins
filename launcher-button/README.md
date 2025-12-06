@@ -15,5 +15,4 @@ Click the rocket icon button in the bar to open or close the app launcher panel.
 ## Requirements
 
 - Noctalia Shell 3.6.0 or higher
-- A launcher panel configured in Noctalia Shell (typically named "launcherPanel")
 
