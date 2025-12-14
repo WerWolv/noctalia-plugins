@@ -1,0 +1,60 @@
+{
+    "settings": {
+        "iconType": {
+            "label": "Symbolstil auswählen",
+            "desc": "Symboltyp"
+        },
+        "minWidth": {
+            "label": "Mindestbreite für das Widget festlegen (in px).",
+            "desc": "Minimale Widget-Breite"
+        },
+        "byteThresholdActive": {
+            "label": "Aktivitätsschwellwert anzeigen",
+            "desc": "Aktivitätsschwellwert in Byte pro Sekunde (B/s) festlegen."
+        },
+        "showNumbers": {
+            "label": "Werte anzeigen",
+            "desc": "Aktuelle RX/TX-Geschwindigkeiten als Zahlen anzeigen."
+        },
+        "forceMegabytes": {
+            "label": "Immer Megabyte (MB) verwenden",
+            "desc": "Alle Verkehrs­werte in MB anzeigen, statt bei geringer Nutzung auf KB zu wechseln."
+        },
+        "spacingInbetween": {
+            "label": "Vertikaler Abstand",
+            "desc": "Den Abstand zwischen den RX/TX-Elementen anpassen."
+        },
+        "fontSizeModifier": {
+            "label": "Schriftgrößen-Faktor",
+            "desc": "Schriftgröße relativ zum Standard skalieren."
+        },
+        "iconSizeModifier": {
+            "label": "Symbolgrößen-Faktor",
+            "desc": "Symbolgröße relativ zum Standard skalieren."
+        },
+        "useCustomColors": {
+            "label": "Eigene Farben",
+            "desc": "Eigene Farben statt der Standard-Themefarben verwenden."
+        },
+        "colorTx": {
+            "label": "TX aktiv",
+            "desc": "Symbolfarbe für Upload (TX), wenn der Schwellwert überschritten ist."
+        },
+        "colorRx": {
+            "label": "RX aktiv",
+            "desc": "Symbolfarbe für Download (RX), wenn der Schwellwert überschritten ist."
+        },
+        "colorSilent": {
+            "label": "RX/TX inaktiv",
+            "desc": "Symbolfarbe, wenn der Datenverkehr unter dem Schwellwert liegt."
+        },
+        "colorText": {
+            "label": "Text",
+            "desc": "Textfarbe für RX- und TX-Werte festlegen."
+        }
+    },
+    "tooltip": {
+        "running": "Katze läuft",
+        "sleeping": "Katze schläft"
+    }
+}
