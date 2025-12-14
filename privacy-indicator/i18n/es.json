@@ -1,7 +1,17 @@
 {
-  "tooltip": {
-    "cam-on": "Cámara: {apps}",
-    "mic-on": "Micrófono: {apps}",
-    "screen-on": "Compartir pantalla: {apps}"
-  }
+    "settings": {
+        "hideInactive": {
+            "label": "Ocultar estados inactivos",
+            "desc": "Ocultar los iconos de micrófono, cámara y pantalla cuando estén inactivos."
+        },
+        "iconSpacing": {
+            "label": "Espaciado de iconos",
+            "desc": "Configurar el espacio entre los iconos."
+        }
+    },
+    "tooltip": {
+        "cam-on": "Cámara: {apps}",
+        "mic-on": "Micrófono: {apps}",
+        "screen-on": "Compartir pantalla: {apps}"
+    }
 }

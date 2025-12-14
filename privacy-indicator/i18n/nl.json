@@ -1,7 +1,17 @@
 {
-  "tooltip": {
-    "cam-on": "Camera: {apps}",
-    "mic-on": "Microfoon: {apps}",
-    "screen-on": "Schermdeling: {apps}"
-  }
+    "settings": {
+        "hideInactive": {
+            "label": "Inactieve status verbergen",
+            "desc": "Verberg de pictogrammen voor microfoon, camera en scherm wanneer ze inactief zijn."
+        },
+        "iconSpacing": {
+            "label": "Pictogramafstand",
+            "desc": "Stel de afstand tussen de pictogrammen in."
+        }
+    },
+    "tooltip": {
+        "cam-on": "Camera: {apps}",
+        "mic-on": "Microfoon: {apps}",
+        "screen-on": "Schermdeling: {apps}"
+    }
 }

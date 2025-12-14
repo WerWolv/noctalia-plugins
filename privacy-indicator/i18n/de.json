@@ -1,7 +1,17 @@
 {
-  "tooltip": {
-    "cam-on": "Kamera: {apps}",
-    "mic-on": "Mikrofon: {apps}",
-    "screen-on": "Bildschirmfreigabe: {apps}"
-  }
+    "settings": {
+        "hideInactive": {
+            "label": "Inaktive Zustände ausblenden",
+            "desc": "Mikrofon-, Kamera- und Bildschirmsymbole ausblenden, wenn sie inaktiv sind."
+        },
+        "iconSpacing": {
+            "label": "Symbolabstand",
+            "desc": "Den Abstand zwischen den Symbolen festlegen."
+        }
+    },
+    "tooltip": {
+        "cam-on": "Kamera: {apps}",
+        "mic-on": "Mikrofon: {apps}",
+        "screen-on": "Bildschirmfreigabe: {apps}"
+    }
 }
