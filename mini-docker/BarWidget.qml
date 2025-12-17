@@ -64,7 +64,7 @@ Rectangle {
     }
 
     Timer {
-        interval: (pluginApi && pluginApi.pluginSettings) ? pluginApi.pluginSettings.refreshInterval : 5000
+        interval: (pluginApi && pluginApi.pluginSettings && pluginApi.pluginSettings.refreshInterval) || 5000
         running: true
         repeat: true
         onTriggered: {
