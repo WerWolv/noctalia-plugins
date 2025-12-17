@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "dockerUtils.js" as DockerUtils
 import qs.Commons
 import qs.Services.System
 import qs.Widgets
@@ -11,63 +12,96 @@ Item {
     id: root
 
     property var pluginApi: null
-    // SmartPanel properties
     readonly property var geometryPlaceholder: panelContainer
     readonly property bool allowAttach: true
-    property real contentPreferredWidth: 800 * Style.uiScaleRatio
-    property real contentPreferredHeight: 550 * Style.uiScaleRatio
+    property real contentPreferredWidth: 850 * Style.uiScaleRatio
+    property real contentPreferredHeight: 600 * Style.uiScaleRatio
     property bool sidebarExpanded: false
     property int currentTabIndex: 0
+    property var _cachedContainers: []
+    property var _pendingCallback: null
 
-    function getStatusColor(state) {
-        if (state === "running")
-            return "#4caf50";
-
-        if (state === "paused")
-            return "#ff9800";
-
-        if (state === "exited")
-            return "#f44336";
-
-        return Color.mOnSurfaceVariant;
-    }
-
-    function updateContainers() {
+    function refreshAll() {
         containerProcess.running = true;
+        volumeProcess.running = true;
+        networkProcess.running = true;
     }
 
-    function updateVolumes() {
-        volumeProcess.running = true;
+    function runCommand(cmdArgs, callback) {
+        if (commandRunner.running) {
+            console.warn("Command runner busy, ignoring:", cmdArgs);
+            return ;
+        }
+        root._pendingCallback = callback;
+        commandRunner.command = cmdArgs;
+        commandRunner.running = true;
     }
 
     function startContainer(id) {
-        runCommand(["docker", "start", id], function() {
-            updateContainers();
-        });
+        runCommand(["docker", "start", id], refreshAll);
     }
 
     function stopContainer(id) {
-        runCommand(["docker", "stop", id], function() {
-            updateContainers();
-        });
+        runCommand(["docker", "stop", id], refreshAll);
     }
 
-    function runCommand(args, callback) {
-        var process = Qt.createQmlObject('import Quickshell.Io; Process { }', root);
-        process.command = args;
-        process.exited.connect(function() {
-            if (callback)
-                callback();
+    function removeContainer(id) {
+        runCommand(["docker", "rm", id], refreshAll);
+    }
 
-            process.destroy();
-        });
-        process.running = true;
+    function removeImage(id) {
+        runCommand(["docker", "rmi", id], refreshAll);
+    }
+
+    function removeVolume(name) {
+        runCommand(["docker", "volume", "rm", name], refreshAll);
+    }
+
+    function removeNetwork(id) {
+        runCommand(["docker", "network", "rm", id], refreshAll);
+    }
+
+    function attemptRunImage(repo, tag) {
+        runImageDialog.imageRepo = repo;
+        runImageDialog.imageTag = tag;
+        runImageDialog.errorMessage = "";
+        exposePortCheck.checked = true;
+        networkField.text = "";
+        inspectProcess.targetImage = repo + ":" + tag;
+        inspectProcess.running = true;
+    }
+
+    function finalizeRunImage(image, port, network) {
+        var cmd = ["docker", "run", "-d"];
+        if (exposePortCheck.checked && port && port.trim() !== "") {
+            cmd.push("-p");
+            cmd.push(port + ":" + port);
+        }
+        if (network && network.trim() !== "" && network !== "bridge") {
+            cmd.push("--network");
+            cmd.push(network);
+        }
+        cmd.push(image);
+        runCommand(cmd, refreshAll);
     }
 
     anchors.fill: parent
-    Component.onCompleted: {
-        updateContainers();
-        updateVolumes();
+    Component.onCompleted: refreshAll()
+
+    ListModel {
+        id: containersModel
+    }
+
+    ListModel {
+        id: imagesModel
+    }
+
+    ListModel {
+        id: volumesModel
+    }
+
+    ListModel {
+        id: networksModel
     }
 
     Rectangle {
@@ -101,10 +135,9 @@ Item {
                         spacing: Style.marginS
 
                         NButton {
-                            icon: "menu-2"
+                            icon: root.sidebarExpanded ? "layout-sidebar-right-expand" : "layout-sidebar-left-expand"
                             Layout.preferredWidth: 40 * Style.uiScaleRatio
                             Layout.preferredHeight: 40 * Style.uiScaleRatio
-                            Layout.alignment: Qt.AlignLeft
                             onClicked: root.sidebarExpanded = !root.sidebarExpanded
                         }
 
@@ -115,16 +148,26 @@ Item {
 
                         SidebarItem {
                             iconName: "brand-docker"
-                            text: "Containers"
-                            isSelected: root.currentTabIndex === 0
-                            onClicked: root.currentTabIndex = 0
+                            itemText: "Containers"
+                            idx: 0
+                        }
+
+                        SidebarItem {
+                            iconName: "photo"
+                            itemText: "Images"
+                            idx: 1
                         }
 
                         SidebarItem {
                             iconName: "database"
-                            text: "Volumes"
-                            isSelected: root.currentTabIndex === 1
-                            onClicked: root.currentTabIndex = 1
+                            itemText: "Volumes"
+                            idx: 2
+                        }
+
+                        SidebarItem {
+                            iconName: "network"
+                            itemText: "Networks"
+                            idx: 3
                         }
 
                         Item {
@@ -168,7 +211,18 @@ Item {
                             spacing: Style.marginM
 
                             Text {
-                                text: root.currentTabIndex === 0 ? "Containers" : "Volumes"
+                                text: {
+                                    if (root.currentTabIndex === 0)
+                                        return "Containers";
+
+                                    if (root.currentTabIndex === 1)
+                                        return "Images";
+
+                                    if (root.currentTabIndex === 2)
+                                        return "Volumes";
+
+                                    return "Networks";
+                                }
                                 font.bold: true
                                 font.pixelSize: 20
                                 color: Color.mOnSurface
@@ -178,22 +232,10 @@ Item {
                                 Layout.fillWidth: true
                             }
 
-                            Text {
-                                text: root.currentTabIndex === 0 ? containersModel.count + " Containers" : volumesModel.count + " Volumes"
-                                color: Color.mOnSurfaceVariant
-                                font.pixelSize: 12
-                                visible: root.contentPreferredWidth > 600
-                            }
-
                             NButton {
                                 icon: "refresh"
                                 text: "Refresh"
-                                onClicked: {
-                                    if (root.currentTabIndex === 0)
-                                        updateContainers();
-                                    else
-                                        updateVolumes();
-                                }
+                                onClicked: refreshAll()
                             }
 
                         }
@@ -215,20 +257,46 @@ Item {
                                 delegate: containerDelegate
                                 spacing: Style.marginS
                                 clip: true
-                                boundsBehavior: Flickable.StopAtBounds
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    visible: containersModel.count === 0
-                                    text: "No containers running"
-                                    color: Color.mOnSurfaceVariant
-                                }
 
                                 ScrollBar.vertical: ScrollBar {
                                     policy: ScrollBar.AsNeeded
                                     active: containersList.moving
                                 }
 
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                visible: containersModel.count === 0
+                                text: "No containers found"
+                                color: Color.mOnSurfaceVariant
+                            }
+
+                        }
+
+                        Item {
+                            ListView {
+                                id: imagesList
+
+                                anchors.fill: parent
+                                anchors.margins: Style.marginM
+                                model: imagesModel
+                                delegate: imageDelegate
+                                spacing: Style.marginS
+                                clip: true
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                    active: imagesList.moving
+                                }
+
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                visible: imagesModel.count === 0
+                                text: "No images found"
+                                color: Color.mOnSurfaceVariant
                             }
 
                         }
@@ -243,14 +311,6 @@ Item {
                                 delegate: volumeDelegate
                                 spacing: Style.marginS
                                 clip: true
-                                boundsBehavior: Flickable.StopAtBounds
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    visible: volumesModel.count === 0
-                                    text: "No volumes found"
-                                    color: Color.mOnSurfaceVariant
-                                }
 
                                 ScrollBar.vertical: ScrollBar {
                                     policy: ScrollBar.AsNeeded
@@ -259,12 +319,288 @@ Item {
 
                             }
 
+                            Text {
+                                anchors.centerIn: parent
+                                visible: volumesModel.count === 0
+                                text: "No volumes found"
+                                color: Color.mOnSurfaceVariant
+                            }
+
+                        }
+
+                        Item {
+                            ListView {
+                                id: networksList
+
+                                anchors.fill: parent
+                                anchors.margins: Style.marginM
+                                model: networksModel
+                                delegate: networkDelegate
+                                spacing: Style.marginS
+                                clip: true
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                    active: networksList.moving
+                                }
+
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                visible: networksModel.count === 0
+                                text: "No networks found"
+                                color: Color.mOnSurfaceVariant
+                            }
+
                         }
 
                     }
 
                 }
 
+            }
+
+        }
+
+    }
+
+    Process {
+        id: commandRunner
+
+        onExited: {
+            if (root._pendingCallback) {
+                root._pendingCallback();
+                root._pendingCallback = null;
+            }
+        }
+
+        stdout: StdioCollector {
+        }
+
+    }
+
+    Process {
+        id: containerProcess
+
+        command: ["docker", "ps", "-a", "--format", "json"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var data = DockerUtils.parseContainers(this.text);
+                root._cachedContainers = data;
+                containersModel.clear();
+                data.forEach(function(c) {
+                    containersModel.append(c);
+                });
+                imageProcess.running = true;
+            }
+        }
+
+    }
+
+    Process {
+        id: imageProcess
+
+        command: ["docker", "images", "--format", "json"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var data = DockerUtils.parseImages(this.text, root._cachedContainers);
+                imagesModel.clear();
+                data.forEach(function(img) {
+                    imagesModel.append(img);
+                });
+            }
+        }
+
+    }
+
+    Process {
+        id: volumeProcess
+
+        command: ["docker", "volume", "ls", "--format", "json"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var data = DockerUtils.parseVolumes(this.text);
+                volumesModel.clear();
+                data.forEach(function(v) {
+                    volumesModel.append(v);
+                });
+            }
+        }
+
+    }
+
+    Process {
+        id: networkProcess
+
+        command: ["docker", "network", "ls", "--format", "json"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var data = DockerUtils.parseNetworks(this.text);
+                networksModel.clear();
+                data.forEach(function(n) {
+                    networksModel.append(n);
+                });
+            }
+        }
+
+    }
+
+    Process {
+        id: inspectProcess
+
+        property string targetImage
+
+        command: ["docker", "inspect", targetImage]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var detectedPort = DockerUtils.parseExposedPorts(this.text);
+                if (!detectedPort)
+                    detectedPort = DockerUtils.guessDefaultPort(runImageDialog.imageRepo);
+
+                portField.text = detectedPort;
+                runImageDialog.placeholderPort = detectedPort;
+                runImageDialog.open();
+            }
+        }
+
+    }
+
+    Process {
+        id: portCheckProcess
+
+        property string pendingPort
+        property string pendingNetwork
+
+        command: ["bash", "-c", "ss -tln | grep :" + pendingPort]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() !== "") {
+                    runImageDialog.errorMessage = "Port " + portCheckProcess.pendingPort + " is occupied on host.";
+                } else {
+                    runImageDialog.close();
+                    finalizeRunImage(runImageDialog.imageRepo + ":" + runImageDialog.imageTag, portCheckProcess.pendingPort, portCheckProcess.pendingNetwork);
+                }
+            }
+        }
+
+    }
+
+    Dialog {
+        id: runImageDialog
+
+        property string imageRepo: ""
+        property string imageTag: ""
+        property string placeholderPort: ""
+        property string errorMessage: ""
+
+        title: "Run Container"
+        modal: true
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+
+        ColumnLayout {
+            spacing: 10
+
+            Text {
+                text: "Run " + runImageDialog.imageRepo + ":" + runImageDialog.imageTag
+                font.bold: true
+                color: Color.mOnSurface
+            }
+
+            CheckBox {
+                id: exposePortCheck
+
+                text: "Expose Port to Host"
+                checked: true
+            }
+
+            GridLayout {
+                columns: 2
+                rowSpacing: 10
+                columnSpacing: 10
+
+                Text {
+                    text: "Host Port:"
+                    color: Color.mOnSurfaceVariant
+                    opacity: exposePortCheck.checked ? 1 : 0.5
+                }
+
+                TextField {
+                    id: portField
+
+                    enabled: exposePortCheck.checked
+                    placeholderText: "Default: " + runImageDialog.placeholderPort
+
+                    validator: IntValidator {
+                        bottom: 1
+                        top: 65535
+                    }
+
+                }
+
+                Text {
+                    text: "Network:"
+                    color: Color.mOnSurfaceVariant
+                }
+
+                TextField {
+                    id: networkField
+
+                    text: (pluginApi && pluginApi.pluginSettings) ? pluginApi.pluginSettings.defaultNetwork : "bridge"
+                    placeholderText: "bridge"
+                }
+
+            }
+
+            Text {
+                text: runImageDialog.errorMessage
+                color: Color.mError
+                visible: text !== ""
+                font.bold: true
+            }
+
+            Text {
+                text: exposePortCheck.checked ? "Mapped to localhost:" + (portField.text || runImageDialog.placeholderPort) : "Internal only. Accessible by other containers on '" + (networkField.text || "bridge") + "'."
+                color: Color.mOnSurfaceVariant
+                font.pixelSize: 11
+                Layout.maximumWidth: 300
+                wrapMode: Text.WordWrap
+            }
+
+        }
+
+        footer: DialogButtonBox {
+            Button {
+                text: "Cancel"
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                onClicked: runImageDialog.close()
+            }
+
+            Button {
+                text: "Run"
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                onClicked: {
+                    var port = portField.text;
+                    var network = networkField.text;
+                    if (!exposePortCheck.checked || port.trim() === "") {
+                        runImageDialog.close();
+                        finalizeRunImage(runImageDialog.imageRepo + ":" + runImageDialog.imageTag, "", network);
+                        return ;
+                    }
+                    runImageDialog.errorMessage = "";
+                    portCheckProcess.pendingPort = port;
+                    portCheckProcess.pendingNetwork = network;
+                    portCheckProcess.command = ["bash", "-c", "ss -tln | grep :" + port];
+                    portCheckProcess.running = true;
+                }
             }
 
         }
@@ -286,11 +622,10 @@ Item {
                 spacing: Style.marginM
 
                 Rectangle {
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: getStatusColor(model.state)
-                    Layout.alignment: Qt.AlignVCenter
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: DockerUtils.getStatusColor(model.state)
                 }
 
                 ColumnLayout {
@@ -298,28 +633,108 @@ Item {
                     spacing: 2
 
                     Text {
-                        text: model.name
+                        text: "" + model.name
                         font.bold: true
                         color: Color.mOnSurface
-                        Layout.fillWidth: true
                         elide: Text.ElideRight
+                        Layout.fillWidth: true
                     }
 
                     Text {
-                        text: model.image
+                        text: "" + model.image + " (" + model.status + ")"
                         color: Color.mOnSurfaceVariant
                         font.pixelSize: 11
-                        Layout.fillWidth: true
                         elide: Text.ElideRight
+                        Layout.fillWidth: true
                     }
 
                 }
 
-                NButton {
-                    icon: model.state === "running" ? "player-stop" : "player-play"
-                    Layout.preferredWidth: 36
-                    Layout.preferredHeight: 36
-                    onClicked: model.state === "running" ? stopContainer(model.id) : startContainer(model.id)
+                Row {
+                    spacing: 5
+
+                    NButton {
+                        icon: model.state === "running" ? "player-stop" : "player-play"
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        onClicked: model.state === "running" ? stopContainer(model.id) : startContainer(model.id)
+                    }
+
+                    NButton {
+                        icon: "trash"
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        visible: model.state !== "running"
+                        onClicked: removeContainer(model.id)
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+    Component {
+        id: imageDelegate
+
+        Rectangle {
+            width: imagesList.width - (imagesList.ScrollBar.vertical ? 10 : 0)
+            height: 60 * Style.uiScaleRatio
+            color: Color.mSurfaceVariant
+            radius: Style.radiusM
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: Style.marginM
+                spacing: Style.marginM
+
+                NIcon {
+                    icon: "photo"
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        text: "" + model.repository + ":" + model.tag
+                        font.bold: true
+                        color: Color.mOnSurface
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: "" + model.size + " • " + model.created
+                        color: Color.mOnSurfaceVariant
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                    }
+
+                }
+
+                Row {
+                    spacing: 5
+
+                    NButton {
+                        text: "Run"
+                        icon: "player-play"
+                        Layout.preferredHeight: 32
+                        onClicked: attemptRunImage(model.repository, model.tag)
+                    }
+
+                    NButton {
+                        icon: "trash"
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        visible: !model.isRunning
+                        onClicked: removeImage(model.id)
+                    }
+
                 }
 
             }
@@ -348,11 +763,31 @@ Item {
                     Layout.preferredHeight: 20
                 }
 
-                Text {
-                    text: model.name
+                ColumnLayout {
                     Layout.fillWidth: true
-                    elide: Text.ElideMiddle
-                    color: Color.mOnSurface
+                    spacing: 2
+
+                    Text {
+                        text: "" + model.name
+                        font.bold: true
+                        color: Color.mOnSurface
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: "" + model.driver
+                        color: Color.mOnSurfaceVariant
+                        font.pixelSize: 11
+                    }
+
+                }
+
+                NButton {
+                    icon: "trash"
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
+                    onClicked: removeVolume(model.name)
                 }
 
             }
@@ -361,103 +796,78 @@ Item {
 
     }
 
-    ListModel {
-        id: containersModel
-    }
+    Component {
+        id: networkDelegate
 
-    ListModel {
-        id: volumesModel
-    }
+        Rectangle {
+            width: networksList.width - (networksList.ScrollBar.vertical ? 10 : 0)
+            height: 50 * Style.uiScaleRatio
+            color: Color.mSurfaceVariant
+            radius: Style.radiusM
 
-    Process {
-        id: containerProcess
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: Style.marginM
+                spacing: Style.marginM
 
-        command: ["docker", "ps", "-a", "--format", "json"]
+                NIcon {
+                    icon: "network"
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                }
 
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var output = this.text;
-                containersModel.clear();
-                var lines = output.split('\n').filter((line) => {
-                    return line.trim() !== '';
-                });
-                lines.forEach(function(line) {
-                    try {
-                        var container = JSON.parse(line);
-                        containersModel.append({
-                            "id": container.ID,
-                            "name": container.Names,
-                            "image": container.Image,
-                            "status": container.Status,
-                            "state": container.State
-                        });
-                    } catch (e) {
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        text: "" + model.name
+                        font.bold: true
+                        color: Color.mOnSurface
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
                     }
-                });
-            }
-        }
 
-    }
-
-    Process {
-        id: volumeProcess
-
-        command: ["docker", "volume", "ls", "--format", "json"]
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var output = this.text;
-                volumesModel.clear();
-                var lines = output.split('\n').filter((line) => {
-                    return line.trim() !== '';
-                });
-                lines.forEach(function(line) {
-                    try {
-                        var volume = JSON.parse(line);
-                        volumesModel.append({
-                            "name": volume.Name,
-                            "driver": volume.Driver
-                        });
-                    } catch (e) {
+                    Text {
+                        text: "" + model.driver + " (" + model.scope + ")"
+                        color: Color.mOnSurfaceVariant
+                        font.pixelSize: 11
                     }
-                });
+
+                }
+
+                NButton {
+                    icon: "trash"
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
+                    visible: !model.isDefault
+                    onClicked: removeNetwork(model.id)
+                }
+
             }
+
         }
 
-    }
-
-    Timer {
-        interval: (pluginApi && pluginApi.pluginSettings) ? pluginApi.pluginSettings.refreshInterval : 5000
-        running: true
-        repeat: true
-        onTriggered: {
-            if (root.currentTabIndex === 0)
-                updateContainers();
-            else
-                updateVolumes();
-        }
     }
 
     component SidebarItem: Rectangle {
-        id: navItem // <--- FIXED: Added ID here to prevent shadowing issues
+        id: sideItem
 
         property string iconName
-        property string text
-        property bool isSelected
-
-        signal clicked()
+        property string itemText
+        property int idx
 
         Layout.fillWidth: true
         Layout.preferredHeight: 40 * Style.uiScaleRatio
-        color: isSelected ? Color.mSurface : Color.transparent
+        color: root.currentTabIndex === idx ? Color.mSurface : Color.transparent
         radius: Style.radiusS
 
         Rectangle {
-            visible: isSelected
+            visible: root.currentTabIndex === idx
             width: 3
             height: 16
-            color: Color.mPrimary
             radius: 2
+            color: Color.mPrimary
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: 4
@@ -469,17 +879,16 @@ Item {
             spacing: 12
 
             NIcon {
-                icon: navItem.iconName // Reference via ID
+                icon: iconName
                 color: Color.mOnSurface
                 Layout.preferredWidth: 24
                 Layout.preferredHeight: 24
             }
 
             Text {
-                text: navItem.text // <--- FIXED: Reference via ID
+                text: sideItem.itemText
                 color: Color.mOnSurface
-                font.weight: isSelected ? Font.DemiBold : Font.Normal
-                visible: root.sidebarExpanded
+                font.weight: root.currentTabIndex === idx ? Font.DemiBold : Font.Normal
                 opacity: root.sidebarExpanded ? 1 : 0
                 Layout.fillWidth: true
                 elide: Text.ElideRight
@@ -498,16 +907,16 @@ Item {
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: parent.clicked()
+            onClicked: root.currentTabIndex = idx
             onEntered: {
-                if (!parent.isSelected)
+                if (root.currentTabIndex !== idx) {
                     parent.color = Qt.rgba(1, 1, 1, 0.05);
-
+                }
             }
             onExited: {
-                if (!parent.isSelected)
+                if (root.currentTabIndex !== idx) {
                     parent.color = Color.transparent;
-
+                }
             }
         }
 
