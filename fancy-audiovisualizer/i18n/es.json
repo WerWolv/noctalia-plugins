@@ -3,6 +3,7 @@
     "barWidth": "Ancho de barra",
     "bloomIntensity": "Intensidad de floración",
     "description": "Configurar la apariencia del visualizador de audio",
+    "innerDiameter": "Diámetro interior",
     "mode": {
       "all": "Todo",
       "bars": "Barras",

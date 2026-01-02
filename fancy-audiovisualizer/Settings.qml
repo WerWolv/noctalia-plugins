@@ -18,6 +18,7 @@ ColumnLayout {
   property real valueBloomIntensity: pluginApi?.pluginSettings?.bloomIntensity ?? 0.5
   property int valueVisualizationMode: pluginApi?.pluginSettings?.visualizationMode ?? 3
   property real valueWaveThickness: pluginApi?.pluginSettings?.waveThickness ?? 1.0
+  property real valueInnerDiameter: pluginApi?.pluginSettings?.innerDiameter ?? 0.7
 
   // Mode helpers
   readonly property bool modeHasBars: valueVisualizationMode === 0 || valueVisualizationMode === 3 || valueVisualizationMode === 5
@@ -104,6 +105,17 @@ ColumnLayout {
     onMoved: value => root.valueRingOpacity = value
   }
 
+  // Base diameter slider
+  NValueSlider {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.innerDiameter") ?? "Inner Diameter"
+    value: root.valueInnerDiameter
+    from: 0
+    to: 1
+    stepSize: 0.05
+    onMoved: value => root.valueInnerDiameter = value
+  }
+
   // Bloom intensity slider
   NValueSlider {
     Layout.fillWidth: true
@@ -127,6 +139,7 @@ ColumnLayout {
     pluginApi.pluginSettings.bloomIntensity = root.valueBloomIntensity;
     pluginApi.pluginSettings.visualizationMode = root.valueVisualizationMode;
     pluginApi.pluginSettings.waveThickness = root.valueWaveThickness;
+    pluginApi.pluginSettings.innerDiameter = root.valueInnerDiameter;
 
     pluginApi.saveSettings();
   }

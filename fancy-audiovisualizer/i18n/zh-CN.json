@@ -3,6 +3,7 @@
     "barWidth": "条宽",
     "bloomIntensity": "光晕强度",
     "description": "配置音频可视化效果外观",
+    "innerDiameter": "内径",
     "mode": {
       "all": "全部",
       "bars": "酒吧",

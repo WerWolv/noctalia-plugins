@@ -25,6 +25,7 @@ DraggableDesktopWidget {
   readonly property real bloomIntensity: pluginApi.pluginSettings?.bloomIntensity ?? pluginApi?.manifest?.metadata?.defaultSettings?.bloomIntensity
   readonly property int visualizationMode: pluginApi?.pluginSettings?.visualizationMode ?? pluginApi?.manifest?.metadata?.defaultSettings?.visualizationMode ?? 3
   readonly property real waveThickness: pluginApi?.pluginSettings?.waveThickness ?? pluginApi?.manifest?.metadata?.defaultSettings?.waveThickness ?? 1.0
+  readonly property real innerDiameter: pluginApi?.pluginSettings?.innerDiameter ?? pluginApi?.manifest?.metadata?.defaultSettings?.innerDiameter ?? 0.7
 
   // Animation time for shader (0 to 3600, 1 hour cycle)
   property real shaderTime: 0
@@ -100,6 +101,11 @@ DraggableDesktopWidget {
     id: visualizer
     anchors.fill: parent
     visible: pluginApi !== null
+    opacity: CavaService.isIdle ? 0 : 1
+
+    Behavior on opacity {
+      NumberAnimation { duration: 500; easing.type: Easing.InOutQuad }
+    }
 
     // Audio texture - named 'source' to match ShaderEffectSource's property and avoid warning
     property var source: audioTextureSource
@@ -118,6 +124,7 @@ DraggableDesktopWidget {
     property real bloomIntensity: root.bloomIntensity
     property real visualizationMode: root.visualizationMode
     property real waveThickness: root.waveThickness
+    property real innerDiameter: root.innerDiameter
 
     fragmentShader: pluginApi ? Qt.resolvedUrl(pluginApi.pluginDir + "/shaders/visualizer.frag.qsb") : ""
   }

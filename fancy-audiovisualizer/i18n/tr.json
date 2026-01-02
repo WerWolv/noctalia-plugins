@@ -3,6 +3,7 @@
     "barWidth": "Çubuk Genişliği",
     "bloomIntensity": "Çiçeklenme Yoğunluğu",
     "description": "Ses görselleştirici görünümünü yapılandır",
+    "innerDiameter": "İç Çap",
     "mode": {
       "all": "Tüm",
       "bars": "Barlar",

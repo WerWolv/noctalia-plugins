@@ -1,7 +1,7 @@
 {
   "id": "fancy-audiovisualizer",
   "name": "Fancy Audiovisualizer",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "minNoctaliaVersion": "3.7.2",
   "author": "Noctalia Team",
   "license": "MIT",
@@ -22,7 +22,8 @@
       "rotationSpeed": 0.5,
       "barWidth": 0.6,
       "ringOpacity": 0.8,
-      "bloomIntensity": 0.5
+      "bloomIntensity": 0.5,
+      "innerDiameter": 0.7
     }
   }
 }

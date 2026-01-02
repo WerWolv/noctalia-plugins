@@ -3,6 +3,7 @@
     "barWidth": "Balkenbreite",
     "bloomIntensity": "Blütenintensität",
     "description": "Audiovisualisierungsdarstellung konfigurieren",
+    "innerDiameter": "Innendurchmesser",
     "mode": {
       "all": "Alle",
       "bars": "Bars",

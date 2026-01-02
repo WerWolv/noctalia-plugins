@@ -3,6 +3,7 @@
     "barWidth": "Breite der Leiste",
     "bloomIntensity": "Intensità Bloom",
     "description": "Konfigurieren Sie das Aussehen des Audio-Visualisierers.",
+    "innerDiameter": "Innendurchmesser",
     "mode": {
       "all": "Kaikki",
       "bars": "Pritličja",

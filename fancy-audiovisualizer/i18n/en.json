@@ -3,6 +3,7 @@
     "barWidth": "Bar Width",
     "bloomIntensity": "Bloom Intensity",
     "description": "Configure the audio visualizer appearance",
+    "innerDiameter": "Inner Diameter",
     "mode": {
       "all": "All",
       "bars": "Bars",

@@ -3,6 +3,7 @@
     "barWidth": "バーの幅",
     "bloomIntensity": "開花強度",
     "description": "オーディオビジュアライザーの外観を設定します。",
+    "innerDiameter": "内径",
     "mode": {
       "all": "すべて",
       "bars": "バー",

@@ -3,6 +3,7 @@
     "barWidth": "Largeur de la barre",
     "bloomIntensity": "Intensité de l'éclat",
     "description": "Configurer l'apparence du visualiseur audio",
+    "innerDiameter": "Diamètre intérieur",
     "mode": {
       "all": "Tout",
       "bars": "Barres",
