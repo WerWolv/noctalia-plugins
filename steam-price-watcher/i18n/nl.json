@@ -51,19 +51,7 @@
       "current-price-label": "Huidige prijs:",
       "target-price-label": "Doelprijs ($):",
       "target-price-hint": "💡 We raden 20% onder de huidige prijs aan voor goede deals.",
-      "settings-saved": "Plugin-instellingen opgeslagen.",
-      "import-wishlist": "Steam Verlanglijst Importeren",
-      "import-description": "Importeer je verlanglijst direct vanuit Steam. Voer je Steam ID of aangepaste gebruikersnaam in.",
-      "steam-id-placeholder": "Bijv: 76561198012345678 of jouw_gebruikersnaam",
-      "import": "Importeren",
-      "importing": "Verlanglijst importeren...",
-      "wishlist-note": "⚠️ Let op: Je Steam-profiel moet openbaar zijn om het importeren te laten werken.",
-      "import-failed": "❌ Importeren mislukt. Controleer of de Steam ID correct is en het profiel openbaar is.",
-      "import-all-exist": "ℹ️ Alle games uit de verlanglijst staan al in je lijst.",
-      "import-success": "✅ Importeren voltooid! {count} games toegevoegd.",
-      "import-no-games": "ℹ️ Geen games met prijs gevonden in verlanglijst.",
-      "auto-sync-wishlist": "Verlanglijst automatisch synchroniseren bij elk interval",
-      "auto-sync-note": "ℹ️ Wanneer ingeschakeld, worden nieuwe games uit je Steam-verlanglijst automatisch toegevoegd. Handmatige games worden nooit verwijderd."
+      "settings-saved": "Plugin-instellingen opgeslagen."
     },
     "open-settings": "Instellingen Openen"
   }

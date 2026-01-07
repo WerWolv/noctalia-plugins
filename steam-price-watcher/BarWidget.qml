@@ -28,8 +28,6 @@ Rectangle {
   property var notifiedGames: cfg.notifiedGames || defaults.notifiedGames || []
   property string currency: cfg.currency || defaults.currency || "br"
   property string currencySymbol: cfg.currencySymbol || defaults.currencySymbol || "R$"
-  property string steamId: cfg.steamId || defaults.steamId || ""
-  property bool autoSyncWishlist: cfg.autoSyncWishlist ?? defaults.autoSyncWishlist ?? false
 
   // State
   property var gamesOnTarget: []
@@ -73,11 +71,8 @@ Rectangle {
     notifiedGames = cfg.notifiedGames || defaults.notifiedGames || [];
     currency = cfg.currency || defaults.currency || "br";
     currencySymbol = cfg.currencySymbol || defaults.currencySymbol || "R$";
-    steamId = cfg.steamId || defaults.steamId || "";
-    autoSyncWishlist = cfg.autoSyncWishlist ?? defaults.autoSyncWishlist ?? false;
     console.log("Steam Price Watcher: Configuration updated");
     console.log("New watchlist length:", watchlist.length);
-    console.log("Auto-sync wishlist:", autoSyncWishlist);
   }
 
   Component.onCompleted: {
@@ -86,11 +81,6 @@ Rectangle {
   }
 
   function checkPrices() {
-    // Sync wishlist first if auto-sync is enabled
-    if (autoSyncWishlist && steamId.length > 0) {
-      syncWishlist();
-    }
-
     if (loading || watchlist.length === 0) return;
     loading = true;
 
@@ -102,145 +92,6 @@ Rectangle {
       var game = watchlist[i];
       checkGamePrice(game);
     }
-  }
-
-  property bool syncing: false
-
-  function syncWishlist() {
-    if (syncing || !steamId || steamId.length === 0) return;
-
-    syncing = true;
-    console.log("Steam Price Watcher: Auto-syncing wishlist for", steamId);
-
-    // Try different URL formats
-    var urls = [
-      "https://store.steampowered.com/wishlist/id/" + steamId + "/wishlistdata/",
-      "https://store.steampowered.com/wishlist/profiles/" + steamId + "/wishlistdata/"
-    ];
-
-    tryWishlistUrl(urls, 0);
-  }
-
-  function tryWishlistUrl(urls, urlIndex) {
-    if (urlIndex >= urls.length) {
-      syncing = false;
-      console.log("Steam Price Watcher: Auto-sync failed - all URLs failed");
-      return;
-    }
-
-    var url = urls[urlIndex];
-    console.log("Steam Price Watcher: Trying URL", url);
-
-    var process = Qt.createQmlObject(`
-      import Quickshell.Io
-      Process {
-        running: true
-        command: ["curl", "-s", "${url}"]
-        stdout: StdioCollector {}
-
-        onExited: (exitCode) => {
-          if (exitCode === 0 && stdout.text.length > 10) {
-            try {
-              var wishlistData = JSON.parse(stdout.text);
-              var gameIds = Object.keys(wishlistData);
-
-              if (gameIds.length === 0) {
-                console.log("Steam Price Watcher: Empty wishlist, trying next URL");
-                root.tryWishlistUrl(urls, urlIndex + 1);
-              } else {
-                console.log("Steam Price Watcher: Found", gameIds.length, "games in wishlist");
-                root.processWishlistSync(gameIds, wishlistData);
-              }
-            } catch (e) {
-              console.error("Steam Price Watcher: Error parsing wishlist:", e);
-              root.tryWishlistUrl(urls, urlIndex + 1);
-            }
-          } else {
-            console.log("Steam Price Watcher: Failed to fetch, trying next URL");
-            root.tryWishlistUrl(urls, urlIndex + 1);
-          }
-          destroy();
-        }
-      }
-    `, root, "wishlistSyncProcess");
-  }
-
-  function processWishlistSync(gameIds, wishlistData) {
-    var newGamesAdded = 0;
-
-    for (var i = 0; i < gameIds.length; i++) {
-      var appId = parseInt(gameIds[i]);
-      var gameInfo = wishlistData[gameIds[i]];
-
-      // Check if game is already in watchlist
-      var alreadyExists = false;
-      for (var j = 0; j < watchlist.length; j++) {
-        if (watchlist[j].appId === appId) {
-          alreadyExists = true;
-          break;
-        }
-      }
-
-      if (!alreadyExists) {
-        // Fetch price and add to watchlist
-        fetchAndAddWishlistGame(appId, gameInfo.name);
-        newGamesAdded++;
-      }
-    }
-
-    syncing = false;
-    if (newGamesAdded > 0) {
-      console.log("Steam Price Watcher: Auto-sync found", newGamesAdded, "new games");
-    } else {
-      console.log("Steam Price Watcher: Auto-sync completed, no new games");
-    }
-  }
-
-  function fetchAndAddWishlistGame(appId, gameName) {
-    var cleanName = gameName.replace(/"/g, '\\"').replace(/\n/g, ' ');
-    var qmlCode = '
-      import Quickshell.Io
-      Process {
-        running: true
-        command: ["curl", "-s", "https://store.steampowered.com/api/appdetails?appids=' + appId + '&cc=' + root.currency + '"]
-        stdout: StdioCollector {}
-        property int gameAppId: ' + appId + '
-        property string gameNameStr: "' + cleanName + '"
-
-        onExited: (exitCode) => {
-          if (exitCode === 0) {
-            try {
-              var response = JSON.parse(stdout.text);
-              var appData = response[gameAppId.toString()];
-
-              if (appData && appData.success && appData.data && appData.data.price_overview) {
-                var currentPrice = appData.data.price_overview.final / 100;
-                var targetPrice = currentPrice * 0.8;
-
-                var game = {
-                  appId: gameAppId,
-                  name: appData.data.name || gameNameStr,
-                  targetPrice: targetPrice,
-                  addedDate: new Date().toISOString(),
-                  fromWishlist: true
-                };
-
-                var temp = root.watchlist.slice();
-                temp.push(game);
-                root.pluginApi.pluginSettings.watchlist = temp;
-                root.pluginApi.saveSettings();
-
-                console.log("Steam Price Watcher: Auto-sync added:", game.name);
-              }
-            } catch (e) {
-              console.error("Steam Price Watcher: Error processing game:", e);
-            }
-          }
-          destroy();
-        }
-      }
-    ';
-    var process = Qt.createQmlObject(qmlCode, root, "wishlistGameFetch");
   }
 
   property int pendingChecks: 0
@@ -466,11 +317,16 @@ Rectangle {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    acceptedButtons: Qt.LeftButton
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-    onClicked: {
+    onClicked: (mouse) => {
       if (pluginApi) {
-        pluginApi.openPanel(screen);
+        if (mouse.button === Qt.LeftButton) {
+          pluginApi.openPanel(screen);
+        } else if (mouse.button === Qt.RightButton) {
+          // Show how to open Settings (no direct API available)
+          ToastService.showNotice("To open Settings:\nRight click bar → Plugins → Steam Price Watcher → Settings");
+        }
       }
     }
 
@@ -479,7 +335,7 @@ Rectangle {
         TooltipService.show(root, tooltipText, BarService.getTooltipDirection());
       }
     }
-    
+
     onExited: {
       TooltipService.hide();
     }

@@ -9,50 +9,22 @@ Monitor Steam game prices and get notified when they reach your target price.
 - 🔔 **Desktop Notifications**: Get notified via notify-send when games reach your target price
 - 📊 **Visual Indicator**: Bar widget shows a notification dot when games are at target price
 - 💰 **Price Comparison**: See current price vs. target price with discount percentages
-- ⚙️ **Easy Configuration**: Search games by name or import your Steam wishlist
+- ⚙️ **Easy Configuration**: Search games by App ID and add them to your watchlist
 - 🔄 **Automatic Updates**: Prices are checked automatically based on your interval setting
 - 🌍 **Multi-Currency**: Support for 40+ Steam currencies
-- 📥 **Wishlist Import**: Import your entire Steam wishlist with one click
 
 ## How to Use
 
 ### Adding Games to Watchlist
 
 1. Open the plugin settings
-2. Enter the game name in the search field
-   - Example: "Counter Strike", "GTA", "Cyberpunk"
+2. Enter the Steam App ID in the search field
+   - You can find the App ID in the game's Steam store page URL
+   - Example: For CS2 the URL is `store.steampowered.com/app/730/`, so the App ID is `730`
 3. Click "Search"
-4. The plugin will show up to 5 matching games
-5. Click "Add" on the game you want to monitor
-6. Set your target price (the plugin suggests 20% below current price)
-7. Click "Add to Watchlist"
-
-### Import Steam Wishlist
-
-The fastest way to add games:
-
-1. Open the plugin settings
-2. Find the "Import Steam Wishlist" section
-3. Enter your Steam ID or custom URL
-   - Example: `76561198012345678` or `yourusername`
-4. Click "Import"
-5. The plugin will automatically add all games from your wishlist
-   - Target prices are set to 20% below current price
-   - Free games are skipped
-   - Already monitored games are skipped
-
-**Note**: Your Steam profile must be public for import to work.
-
-### Game Search
-
-Alternatively, search for individual games:
-
-- **Counter Strike** → Shows CS:GO, CS2, etc.
-- **GTA** → Shows GTA V, GTA IV, etc.
-- **Cyberpunk** → Shows Cyberpunk 2077
-- **Red Dead** → Shows Red Dead Redemption 2
-
-The search returns up to 5 results. Select the game you want and add it to your watchlist.
+4. The plugin will fetch the game details
+5. Set your target price (the plugin suggests 20% below current price)
+6. Click "Add to Watchlist"
 
 ### Monitoring Prices
 
@@ -82,13 +54,11 @@ In the panel (click the widget):
   - ⚠️ Very short intervals may result in many API requests
 - **Currency**: Choose from 40+ supported Steam currencies
   - USD, EUR, GBP, BRL, PLN, JPY, CNY, and many more
-- **Wishlist Import**: Import games directly from your Steam wishlist
-- **Game Search**: Search and add individual games manually
+- **Game Search**: Search and add games by Steam App ID
 
 ## Technical Details
 
 - **API**: Uses Steam Store API (`store.steampowered.com/api/appdetails`)
-- **Wishlist API**: Uses Steam Wishlist API for wishlist imports
 - **Currency**: Supports 40+ currencies (USD, EUR, GBP, BRL, PLN, JPY, CNY, RUB, etc.)
 - **Data Storage**: Settings are stored in Noctalia's plugin configuration
 - **Notifications**: Uses notify-send for desktop notifications
@@ -119,10 +89,8 @@ In the panel (click the widget):
 
 ### Version 1.1.0
 
-- Added Steam Wishlist import feature
-- Expanded currency support to 40+ currencies
-- All major Steam-supported currencies now available
-- Improved user experience for adding games in bulk
+- Expanded currency support from 10 to 40+ currencies
+- All major Steam-supported currencies now available (ARS, AUD, BRL, CAD, CHF, CLP, CNY, COP, CZK, DKK, EUR, GBP, HKD, HUF, IDR, ILS, INR, JPY, KRW, KZT, MXN, MYR, NOK, NZD, PEN, PHP, PLN, QAR, RON, RUB, SAR, SEK, SGD, THB, TRY, TWD, UAH, USD, UYU, VND, ZAR)
 
 ### Version 1.0.0
 
@@ -158,7 +126,7 @@ This plugin follows the same license as Noctalia Shell.
 **Solution**: Make sure notify-send is installed and working on your system
 
 **Problem**: "No games found" when searching
-**Solution**: Verify the App ID or Name is correct and the game exists on Steam
+**Solution**: Verify the App ID is correct and the game exists on Steam
 
 **Problem**: Prices not updating
 **Solution**: Click the refresh button in the panel or wait for the next automatic check

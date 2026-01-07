@@ -51,19 +51,7 @@
       "current-price-label": "Preço atual:",
       "target-price-label": "Preço-alvo (R$):",
       "target-price-hint": "💡 Sugerimos 20% abaixo do preço atual para bons negócios.",
-      "settings-saved": "Configurações do plugin salvas.",
-      "import-wishlist": "Importar Lista de Desejos do Steam",
-      "import-description": "Importe sua lista de desejos diretamente do Steam. Insira seu Steam ID ou nome de usuário personalizado.",
-      "steam-id-placeholder": "Ex: 76561198012345678 ou seu_usuario",
-      "import": "Importar",
-      "importing": "Importando lista de desejos...",
-      "wishlist-note": "⚠️ Nota: Seu perfil Steam deve estar público para que a importação funcione.",
-      "import-failed": "❌ Falha na importação. Verifique se o Steam ID está correto e o perfil está público.",
-      "import-all-exist": "ℹ️ Todos os jogos da lista de desejos já estão na sua lista.",
-      "import-success": "✅ Importação concluída! {count} jogos adicionados.",
-      "import-no-games": "ℹ️ Nenhum jogo com preço foi encontrado na lista de desejos.",
-      "auto-sync-wishlist": "Sincronizar automaticamente a lista de desejos a cada intervalo",
-      "auto-sync-note": "ℹ️ Quando ativado, novos jogos da sua lista de desejos do Steam serão automaticamente adicionados. Jogos manuais nunca serão removidos."
+      "settings-saved": "Configurações do plugin salvas."
     },
     "open-settings": "Abrir Configurações"
   }

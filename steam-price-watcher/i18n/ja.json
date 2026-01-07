@@ -51,19 +51,7 @@
       "current-price-label": "現在の価格:",
       "target-price-label": "目標価格 ($):",
       "target-price-hint": "💡 お得な取引には現在価格の20%引きをお勧めします。",
-      "settings-saved": "プラグイン設定を保存しました。",
-      "import-wishlist": "Steamウィッシュリストをインポート",
-      "import-description": "Steamから直接ウィッシュリストをインポートします。Steam IDまたはカスタムユーザー名を入力してください。",
-      "steam-id-placeholder": "例: 76561198012345678 または your_username",
-      "import": "インポート",
-      "importing": "ウィッシュリストをインポート中...",
-      "wishlist-note": "⚠️ 注意: インポートを機能させるには、Steamプロフィールが公開されている必要があります。",
-      "import-failed": "❌ インポートに失敗しました。Steam IDが正しいか、プロフィールが公開されているか確認してください。",
-      "import-all-exist": "ℹ️ ウィッシュリストのすべてのゲームは既にリストに追加されています。",
-      "import-success": "✅ インポート完了！{count}個のゲームを追加しました。",
-      "import-no-games": "ℹ️ ウィッシュリストに価格のあるゲームが見つかりませんでした。",
-      "auto-sync-wishlist": "チェック間隔ごとに自動的にウィッシュリストを同期",
-      "auto-sync-note": "ℹ️ 有効にすると、Steamウィッシュリストの新しいゲームが自動的に追加されます。手動ゲームは削除されません。"
+      "settings-saved": "プラグイン設定を保存しました。"
     },
     "open-settings": "設定を開く"
   }

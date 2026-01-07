@@ -51,19 +51,7 @@
       "current-price-label": "Güncel fiyat:",
       "target-price-label": "Hedef fiyat ($):",
       "target-price-hint": "💡 İyi fırsatlar için güncel fiyatın %80'ini öneriyoruz.",
-      "settings-saved": "Eklenti ayarları kaydedildi.",
-      "import-wishlist": "Steam İstek Listesini İçe Aktar",
-      "import-description": "İstek listenizi doğrudan Steam'den içe aktarın. Steam ID'nizi veya özel kullanıcı adınızı girin.",
-      "steam-id-placeholder": "Örn: 76561198012345678 veya kullanici_adiniz",
-      "import": "İçe Aktar",
-      "importing": "İstek listesi içe aktarılıyor...",
-      "wishlist-note": "⚠️ Not: İçe aktarmanın çalışması için Steam profilinizin herkese açık olması gerekir.",
-      "import-failed": "❌ İçe aktarma başarısız. Steam ID'nin doğru olduğundan ve profilin herkese açık olduğundan emin olun.",
-      "import-all-exist": "ℹ️ İstek listesindeki tüm oyunlar zaten listenizde.",
-      "import-success": "✅ İçe aktarma tamamlandı! {count} oyun eklendi.",
-      "import-no-games": "ℹ️ İstek listesinde fiyatı olan oyun bulunamadı.",
-      "auto-sync-wishlist": "Her aralıkta istek listesini otomatik olarak senkronize et",
-      "auto-sync-note": "ℹ️ Etkinleştirildiğinde, Steam istek listenizden yeni oyunlar otomatik olarak eklenecektir. Manuel oyunlar asla kaldırılmayacaktır."
+      "settings-saved": "Eklenti ayarları kaydedildi."
     },
     "open-settings": "Ayarları Aç"
   }

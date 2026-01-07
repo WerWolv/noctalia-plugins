@@ -12,7 +12,7 @@ ColumnLayout {
   spacing: Style.marginM
 
   property var pluginApi: null
-  
+
   // Configuration
   property var cfg: pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
@@ -21,8 +21,6 @@ ColumnLayout {
   property int checkInterval: cfg.checkInterval ?? defaults.checkInterval ?? 30
   property string currency: cfg.currency || defaults.currency || "br"
   property string currencySymbol: cfg.currencySymbol || defaults.currencySymbol || "R$"
-  property string steamId: cfg.steamId || defaults.steamId || ""
-  property bool autoSyncWishlist: cfg.autoSyncWishlist ?? defaults.autoSyncWishlist ?? false
 
   // Search state
   property var searchResults: []
@@ -38,7 +36,7 @@ ColumnLayout {
   }
 
   NText {
-    text: pluginApi?.tr("steam-price-watcher.settings.description") || 
+    text: pluginApi?.tr("steam-price-watcher.settings.description") ||
       "Configure o intervalo de verificação e adicione jogos à sua watchlist pesquisando na Steam."
     color: Color.mOnSurfaceVariant
     pointSize: Style.fontSizeM
@@ -80,7 +78,7 @@ ColumnLayout {
           Layout.preferredWidth: 80 * Style.uiScaleRatio
           Layout.preferredHeight: Style.baseWidgetSize
           text: checkInterval.toString()
-          
+
           onTextChanged: {
             var val = parseInt(text);
             if (!isNaN(val) && val >= 15 && val <= 1440) {
@@ -100,7 +98,7 @@ ColumnLayout {
       }
 
       NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.interval-warning") || 
+        text: pluginApi?.tr("steam-price-watcher.settings.interval-warning") ||
           "⚠️ Intervalos muito curtos podem resultar em muitas requisições à API da Steam."
         color: Color.mError
         pointSize: Style.fontSizeS
@@ -188,7 +186,7 @@ ColumnLayout {
         onSelected: key => {
           if (pluginApi && pluginApi.pluginSettings) {
             pluginApi.pluginSettings.currency = key;
-            
+
             // Define o símbolo da moeda
             var symbols = {
               "ar": "ARS$", "au": "A$", "br": "R$", "ca": "CA$", "ch": "CHF",
@@ -208,150 +206,6 @@ ColumnLayout {
     }
   }
 
-  // Wishlist Import section
-  NBox {
-    Layout.fillWidth: true
-    Layout.preferredHeight: wishlistImportContent.implicitHeight + Style.marginM * 2
-    color: Color.mSurfaceVariant
-
-    property bool importing: false
-    property string importStatus: ""
-
-    ColumnLayout {
-      id: wishlistImportContent
-      anchors.fill: parent
-      anchors.margins: Style.marginM
-      spacing: Style.marginS
-
-      NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.import-wishlist") || "Import Steam Wishlist"
-        pointSize: Style.fontSizeL
-        font.weight: Style.fontWeightBold
-        color: Color.mOnSurface
-      }
-
-      NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.import-description") ||
-          "Import your wishlist directly from Steam. Enter your Steam ID or custom username."
-        color: Color.mOnSurfaceVariant
-        pointSize: Style.fontSizeS
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-      }
-
-      RowLayout {
-        Layout.fillWidth: true
-        spacing: Style.marginM
-
-        NTextInput {
-          id: steamIdInput
-          Layout.fillWidth: true
-          Layout.preferredHeight: Style.baseWidgetSize
-          placeholderText: pluginApi?.tr("steam-price-watcher.settings.steam-id-placeholder") ||
-            "Ex: 76561198012345678 or your_username"
-          text: root.steamId
-
-          onTextChanged: {
-            if (pluginApi && pluginApi.pluginSettings && text.trim().length > 0) {
-              pluginApi.pluginSettings.steamId = text.trim();
-              pluginApi.saveSettings();
-            }
-          }
-        }
-
-        NButton {
-          text: pluginApi?.tr("steam-price-watcher.settings.import") || "Import"
-          enabled: !parent.parent.parent.importing && steamIdInput.text.trim().length > 0
-          onClicked: {
-            if (steamIdInput.text.trim().length > 0) {
-              importWishlist(steamIdInput.text.trim());
-            }
-          }
-        }
-      }
-
-      // Auto-sync toggle
-      RowLayout {
-        Layout.fillWidth: true
-        spacing: Style.marginM
-
-        NCheckBox {
-          id: autoSyncCheckbox
-          checked: root.autoSyncWishlist
-          onCheckedChanged: {
-            if (pluginApi && pluginApi.pluginSettings) {
-              pluginApi.pluginSettings.autoSyncWishlist = checked;
-              pluginApi.saveSettings();
-            }
-          }
-        }
-
-        NText {
-          text: pluginApi?.tr("steam-price-watcher.settings.auto-sync-wishlist") ||
-            "Automatically sync wishlist every check interval"
-          color: Color.mOnSurface
-          pointSize: Style.fontSizeM
-          Layout.fillWidth: true
-          wrapMode: Text.WordWrap
-        }
-      }
-
-      NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.auto-sync-note") ||
-          "ℹ️ When enabled, new games from your Steam wishlist will be automatically added. Manual games will never be removed."
-        color: Color.mOnSurfaceVariant
-        pointSize: Style.fontSizeXS
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        visible: autoSyncCheckbox.checked
-      }
-
-      // Status messages
-      NText {
-        visible: parent.parent.importing
-        text: pluginApi?.tr("steam-price-watcher.settings.importing") || "Importando wishlist..."
-        color: Color.mOnSurfaceVariant
-        pointSize: Style.fontSizeM
-        Layout.fillWidth: true
-
-        NIcon {
-          anchors.left: parent.left
-          anchors.leftMargin: -25
-          anchors.verticalCenter: parent.verticalCenter
-          icon: "loader"
-          pointSize: Style.fontSizeM
-          color: Color.mPrimary
-
-          RotationAnimator on rotation {
-            running: wishlistImportContent.parent.importing
-            from: 0
-            to: 360
-            duration: 1000
-            loops: Animation.Infinite
-          }
-        }
-      }
-
-      NText {
-        visible: parent.parent.importStatus.length > 0 && !parent.parent.importing
-        text: parent.parent.importStatus
-        color: parent.parent.importStatus.includes("sucesso") || parent.parent.importStatus.includes("success") ?
-          Color.mPrimary : Color.mError
-        pointSize: Style.fontSizeS
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-      }
-
-      NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.wishlist-note") ||
-          "⚠️ Nota: Seu perfil Steam deve estar público para que a importação funcione."
-        color: Color.mOnSurfaceVariant
-        pointSize: Style.fontSizeXS
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-      }
-    }
-  }
 
   // Search section
   NBox {
@@ -372,7 +226,7 @@ ColumnLayout {
       }
 
       NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.search-hint") || 
+        text: pluginApi?.tr("steam-price-watcher.settings.search-hint") ||
           "Pesquise jogos pelo nome. Digite o nome do jogo e clique em Pesquisar."
         color: Color.mOnSurfaceVariant
         pointSize: Style.fontSizeS
@@ -388,7 +242,7 @@ ColumnLayout {
           id: searchInput
           Layout.fillWidth: true
           Layout.preferredHeight: Style.baseWidgetSize
-          placeholderText: pluginApi?.tr("steam-price-watcher.settings.search-placeholder") || 
+          placeholderText: pluginApi?.tr("steam-price-watcher.settings.search-placeholder") ||
             "Digite o nome do jogo (ex: Counter Strike)"
         }
 
@@ -410,7 +264,7 @@ ColumnLayout {
         color: Color.mOnSurfaceVariant
         pointSize: Style.fontSizeM
         Layout.fillWidth: true
-        
+
         NIcon {
           id: loadingIcon
           anchors.left: parent.left
@@ -419,7 +273,7 @@ ColumnLayout {
           icon: "loader"
           pointSize: Style.fontSizeM
           color: Color.mPrimary
-          
+
           RotationAnimator on rotation {
             running: searching
             from: 0
@@ -464,20 +318,20 @@ ColumnLayout {
                 radius: Style.iRadiusS
                 border.color: Color.mOutline
                 border.width: 1
-                
+
                 Image {
                   anchors.fill: parent
                   anchors.margins: 1
                   source: `https://cdn.cloudflare.steamstatic.com/steam/apps/${modelData.appId}/capsule_184x69.jpg`
                   fillMode: Image.PreserveAspectFit
                   asynchronous: true
-                  
+
                   Rectangle {
                     anchors.fill: parent
                     color: Color.mSurfaceVariant
                     visible: parent.status === Image.Loading || parent.status === Image.Error
                     radius: Style.iRadiusS
-                    
+
                     NIcon {
                       anchors.centerIn: parent
                       icon: "gamepad"
@@ -516,7 +370,7 @@ ColumnLayout {
                   }
 
                   NText {
-                    text: modelData.price ? `${root.currencySymbol} ${modelData.price.toFixed(2)}` : 
+                    text: modelData.price ? `${root.currencySymbol} ${modelData.price.toFixed(2)}` :
                       (pluginApi?.tr("steam-price-watcher.settings.free") || "Gratuito")
                     color: Color.mPrimary
                     pointSize: Style.fontSizeM
@@ -525,7 +379,7 @@ ColumnLayout {
                 }
 
                 NButton {
-                  text: isGameInWatchlist(modelData.appId) ? 
+                  text: isGameInWatchlist(modelData.appId) ?
                     (pluginApi?.tr("steam-price-watcher.settings.added") || "✓ Adicionado") :
                     (pluginApi?.tr("steam-price-watcher.settings.add") || "+ Adicionar")
                   enabled: !isGameInWatchlist(modelData.appId)
@@ -539,7 +393,7 @@ ColumnLayout {
               }
 
               NText {
-                text: pluginApi?.tr("steam-price-watcher.settings.free-game-note") || 
+                text: pluginApi?.tr("steam-price-watcher.settings.free-game-note") ||
                   "Jogos gratuitos não podem ser adicionados à watchlist."
                 color: Color.mOnSurfaceVariant
                 pointSize: Style.fontSizeS
@@ -555,7 +409,7 @@ ColumnLayout {
       // No results message
       NText {
         visible: !searching && searchResults.length === 0 && searchQuery.length > 0
-        text: pluginApi?.tr("steam-price-watcher.settings.no-results") || 
+        text: pluginApi?.tr("steam-price-watcher.settings.no-results") ||
           "Nenhum jogo encontrado. Verifique o App ID e tente novamente."
         color: Color.mOnSurfaceVariant
         pointSize: Style.fontSizeM
@@ -576,7 +430,7 @@ ColumnLayout {
         }
 
         NText {
-          text: pluginApi?.tr("steam-price-watcher.settings.current-watchlist") || 
+          text: pluginApi?.tr("steam-price-watcher.settings.current-watchlist") ||
             `Watchlist atual (${watchlist.length} ${watchlist.length === 1 ? "jogo" : "jogos"})`
           color: Color.mOnSurface
           pointSize: Style.fontSizeM
@@ -616,20 +470,20 @@ ColumnLayout {
                   radius: Style.iRadiusS
                   border.color: Color.mOutline
                   border.width: 1
-                  
+
                   Image {
                     anchors.fill: parent
                     anchors.margins: 1
                     source: `https://cdn.cloudflare.steamstatic.com/steam/apps/${modelData.appId}/capsule_184x69.jpg`
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
-                    
+
                     Rectangle {
                       anchors.fill: parent
                       color: Color.mSurfaceVariant
                       visible: parent.status === Image.Loading || parent.status === Image.Error
                       radius: Style.iRadiusS
-                      
+
                       NIcon {
                         anchors.centerIn: parent
                         icon: "gamepad"
@@ -654,7 +508,7 @@ ColumnLayout {
                   }
 
                   NText {
-                    text: modelData.addedDate ? 
+                    text: modelData.addedDate ?
                       `${new Date(modelData.addedDate).toLocaleDateString('pt-BR')}` :
                       `App ID: ${modelData.appId}`
                     color: Color.mOnSurfaceVariant
@@ -751,7 +605,7 @@ ColumnLayout {
         }
 
         NText {
-          text: addGameDialog.gameData && addGameDialog.gameData.price ? 
+          text: addGameDialog.gameData && addGameDialog.gameData.price ?
             `${root.currencySymbol} ${addGameDialog.gameData.price.toFixed(2)}` : ""
           color: Color.mOnSurface
           pointSize: Style.fontSizeM
@@ -774,13 +628,13 @@ ColumnLayout {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.baseWidgetSize
           text: "0.00"
-          
+
           property var numberValidator: DoubleValidator {
             bottom: 0
             decimals: 2
             notation: DoubleValidator.StandardNotation
           }
-          
+
           Component.onCompleted: {
             if (inputItem) {
               inputItem.validator = numberValidator;
@@ -789,7 +643,7 @@ ColumnLayout {
         }
 
         NText {
-          text: pluginApi?.tr("steam-price-watcher.settings.target-price-hint") || 
+          text: pluginApi?.tr("steam-price-watcher.settings.target-price-hint") ||
             "💡 Sugerimos 20% abaixo do preço atual para boas ofertas."
           color: Color.mOnSurfaceVariant
           pointSize: Style.fontSizeXS
@@ -828,7 +682,7 @@ ColumnLayout {
     searching = true;
     searchQuery = query;
     searchResults = [];
-    
+
     // Search by game name using Steam's search API
     searchGamesByName(query);
   }
@@ -840,7 +694,7 @@ ColumnLayout {
         running: true
         command: ["curl", "-s", "https://steamcommunity.com/actions/SearchApps/${encodeURIComponent(gameName)}"]
         stdout: StdioCollector {}
-        
+
         onExited: (exitCode) => {
           if (exitCode === 0) {
             try {
@@ -849,7 +703,7 @@ ColumnLayout {
                 // Fetch prices for the top 5 results
                 var topResults = results.slice(0, 5);
                 root.pendingFetches = topResults.length;
-                
+
                 for (var i = 0; i < topResults.length; i++) {
                   root.fetchGamePrice(topResults[i].appid, topResults[i].name);
                 }
@@ -866,7 +720,7 @@ ColumnLayout {
             root.searchResults = [];
             root.searching = false;
           }
-          
+
           destroy();
         }
       }
@@ -884,7 +738,7 @@ ColumnLayout {
         stdout: StdioCollector {}
         property int gameAppId: ${appId}
         property string gameNameStr: "${gameName.replace(/"/g, '\\"')}"
-        
+
         onExited: (exitCode) => {
           if (exitCode === 0) {
             try {
@@ -896,11 +750,11 @@ ColumnLayout {
                   name: appData.data.name || gameNameStr,
                   price: 0
                 };
-                
+
                 if (appData.data.price_overview) {
                   game.price = appData.data.price_overview.final / 100;
                 }
-                
+
                 // Add to results
                 var temp = root.searchResults.slice();
                 temp.push(game);
@@ -910,7 +764,7 @@ ColumnLayout {
               console.error("Error parsing Steam API response:", e);
             }
           }
-          
+
           root.pendingFetches--;
           if (root.pendingFetches === 0) {
             root.searching = false;
@@ -939,11 +793,11 @@ ColumnLayout {
         targetPrice: targetPrice,
         addedDate: new Date().toISOString()
       });
-      
+
       pluginApi.pluginSettings.watchlist = temp;
       pluginApi.saveSettings();
       console.log("Steam Price Watcher: Added", game.name, "with target price", targetPrice);
-      
+
       // Clear search
       searchInput.text = "";
       searchResults = [];
@@ -955,7 +809,7 @@ ColumnLayout {
     if (pluginApi && pluginApi.pluginSettings) {
       var temp = watchlist.slice();
       var removed = temp.splice(index, 1);
-      
+
       // Remover jogo da lista de notificados
       if (removed.length > 0) {
         var appId = removed[0].appId;
@@ -968,7 +822,7 @@ ColumnLayout {
         }
         pluginApi.pluginSettings.notifiedGames = notifiedTemp;
       }
-      
+
       pluginApi.pluginSettings.watchlist = temp;
       pluginApi.saveSettings();
       console.log("Steam Price Watcher: Removed", removed[0].name, "and cleared from notifications");
@@ -1072,194 +926,10 @@ ColumnLayout {
     }
   }
 
-  // Import wishlist from Steam
-  property var wishlistImportBox: null
-
-  Component.onCompleted: {
-    // Find the wishlist import box to update its properties
-    for (var i = 0; i < root.children.length; i++) {
-      if (root.children[i].toString().indexOf("wishlistImportContent") !== -1) {
-        wishlistImportBox = root.children[i];
-        break;
-      }
-    }
-  }
-
-  function importWishlist(steamId) {
-    // Find the wishlist import NBox
-    var importBox = null;
-    for (var i = 0; i < root.children.length; i++) {
-      if (root.children[i].importing !== undefined) {
-        importBox = root.children[i];
-        break;
-      }
-    }
-
-    if (!importBox) {
-      console.error("Could not find import box");
-      return;
-    }
-
-    importBox.importing = true;
-    importBox.importStatus = "";
-
-    console.log("Steam Price Watcher: Starting wishlist import for", steamId);
-
-    // Try different URL formats
-    var urls = [
-      "https://store.steampowered.com/wishlist/id/" + steamId + "/wishlistdata/",
-      "https://store.steampowered.com/wishlist/profiles/" + steamId + "/wishlistdata/"
-    ];
-
-    tryImportFromUrl(urls, 0, importBox);
-  }
-
-  function tryImportFromUrl(urls, urlIndex, importBox) {
-    if (urlIndex >= urls.length) {
-      importBox.importing = false;
-      importBox.importStatus = pluginApi?.tr("steam-price-watcher.settings.import-failed") ||
-        "❌ Falha ao importar. Verifique se o Steam ID está correto e o perfil está público.";
-      console.log("Steam Price Watcher: All URL attempts failed");
-      return;
-    }
-
-    var url = urls[urlIndex];
-    console.log("Steam Price Watcher: Trying URL", url);
-
-    var process = Qt.createQmlObject(`
-      import Quickshell.Io
-      Process {
-        running: true
-        command: ["curl", "-s", "${url}"]
-        stdout: StdioCollector {}
-
-        onExited: (exitCode) => {
-          if (exitCode === 0 && stdout.text.length > 10) {
-            try {
-              var wishlistData = JSON.parse(stdout.text);
-              var gameIds = Object.keys(wishlistData);
-
-              if (gameIds.length === 0) {
-                console.log("Steam Price Watcher: Empty wishlist, trying next URL");
-                root.tryImportFromUrl(urls, urlIndex + 1, importBox);
-              } else {
-                console.log("Steam Price Watcher: Found", gameIds.length, "games in wishlist");
-                root.processWishlistGames(gameIds, wishlistData, importBox);
-              }
-            } catch (e) {
-              console.error("Steam Price Watcher: Error parsing wishlist:", e);
-              root.tryImportFromUrl(urls, urlIndex + 1, importBox);
-            }
-          } else {
-            console.log("Steam Price Watcher: Failed to fetch, trying next URL");
-            root.tryImportFromUrl(urls, urlIndex + 1, importBox);
-          }
-          destroy();
-        }
-      }
-    `, root, "wishlistProcess");
-  }
-
-  property int wishlistGamesAdded: 0
-  property int wishlistGamesTotal: 0
-
-  function processWishlistGames(gameIds, wishlistData, importBox) {
-    wishlistGamesAdded = 0;
-    wishlistGamesTotal = gameIds.length;
-
-    var added = 0;
-    var skipped = 0;
-
-    for (var i = 0; i < gameIds.length; i++) {
-      var appId = parseInt(gameIds[i]);
-      var gameInfo = wishlistData[gameIds[i]];
-
-      // Check if game is already in watchlist
-      if (isGameInWatchlist(appId)) {
-        skipped++;
-        console.log("Steam Price Watcher: Skipping", gameInfo.name, "- already in watchlist");
-        continue;
-      }
-
-      // Fetch price and add to watchlist
-      fetchWishlistGamePrice(appId, gameInfo.name, importBox);
-    }
-
-    // Update status immediately for skipped games
-    if (skipped === gameIds.length) {
-      importBox.importing = false;
-      importBox.importStatus = pluginApi?.tr("steam-price-watcher.settings.import-all-exist") ||
-        "ℹ️ Todos os jogos da wishlist já estão na sua lista.";
-    }
-  }
-
-  property int pendingWishlistFetches: 0
-
-  function fetchWishlistGamePrice(appId, gameName, importBox) {
-    pendingWishlistFetches++;
-
-    var process = Qt.createQmlObject(`
-      import Quickshell.Io
-      Process {
-        running: true
-        command: ["curl", "-s", "https://store.steampowered.com/api/appdetails?appids=${appId}&cc=${root.currency}"]
-        stdout: StdioCollector {}
-        property int gameAppId: ${appId}
-        property string gameNameStr: "${gameName.replace(/"/g, '\\"').replace(/\n/g, ' ')}"
-
-        onExited: (exitCode) => {
-          if (exitCode === 0) {
-            try {
-              var response = JSON.parse(stdout.text);
-              var appData = response[gameAppId.toString()];
-
-              if (appData && appData.success && appData.data && appData.data.price_overview) {
-                var currentPrice = appData.data.price_overview.final / 100;
-                var targetPrice = currentPrice * 0.8; // 20% discount
-
-                var game = {
-                  appId: gameAppId,
-                  name: appData.data.name || gameNameStr,
-                  targetPrice: targetPrice,
-                  addedDate: new Date().toISOString()
-                };
-
-                // Add to watchlist
-                var temp = root.watchlist.slice();
-                temp.push(game);
-                root.pluginApi.pluginSettings.watchlist = temp;
-                root.pluginApi.saveSettings();
-                root.wishlistGamesAdded++;
-
-                console.log("Steam Price Watcher: Added from wishlist:", game.name, "target:", targetPrice);
-              } else {
-                console.log("Steam Price Watcher: Skipping", gameNameStr, "- no price available");
-              }
-            } catch (e) {
-              console.error("Steam Price Watcher: Error processing game:", e);
-            }
-          }
-
-          root.pendingWishlistFetches--;
-          if (root.pendingWishlistFetches === 0) {
-            importBox.importing = false;
-            if (root.wishlistGamesAdded > 0) {
-              importBox.importStatus = (root.pluginApi?.tr("steam-price-watcher.settings.import-success") || "✅ Importação concluída! {count} jogos adicionados.").replace("{count}", root.wishlistGamesAdded.toString());
-            } else {
-              importBox.importStatus = root.pluginApi?.tr("steam-price-watcher.settings.import-no-games") || "ℹ️ Nenhum jogo com preço foi encontrado na wishlist.";
-            }
-          }
-
-          destroy();
-        }
-      }
-    `, root, "wishlistGameProcess");
-  }
-
   // Called when user clicks Apply in settings dialog
   function saveSettings() {
     console.log("SteamPriceWatcher: saveSettings() called");
-    
+
     if (!pluginApi) {
       Logger.e("SteamPriceWatcher", "Cannot save settings: pluginApi is null");
       return;
@@ -1267,12 +937,12 @@ ColumnLayout {
 
     // Save settings to disk
     pluginApi.saveSettings();
-    
+
     // Show notification
     var message = pluginApi?.tr("steam-price-watcher.settings.settings-saved") || "Plugin settings saved.";
     console.log("SteamPriceWatcher: Showing toast with message:", message);
     ToastService.showNotice(message);
-    
+
     Logger.i("SteamPriceWatcher", "Settings saved successfully");
   }
 }
