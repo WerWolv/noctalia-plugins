@@ -198,95 +198,222 @@ Item {
                   boundsBehavior: Flickable.StopAtBounds
                   flickableDirection: Flickable.VerticalFlick
 
-                  delegate: Rectangle {
+                  delegate: Item {
+                    id: delegateItem
                     width: ListView.view.width
                     height: Style.baseWidgetSize
-                    color: Color.mSurface
-                    radius: Style.radiusS
 
-                    RowLayout {
-                      anchors.left: parent.left
-                      anchors.right: parent.right
-                      anchors.verticalCenter: parent.verticalCenter
-                      anchors.leftMargin: Style.marginM
-                      anchors.rightMargin: Style.marginM
-                      spacing: Style.marginS
+                    required property int index
+                    required property var modelData
 
-                      NToggle {
-                        checked: model.completed
-                        onToggled: checked => {
-                                     if (pluginApi) {
-                                       var todos = pluginApi.pluginSettings.todos || [];
+                    // Properties for drag functionality
+                    property bool dragging: false
+                    property int dragStartY: 0
+                    property int dragStartIndex: -1
+                    property int dragTargetIndex: -1
+                    property int itemSpacing: Style.marginS
 
-                                       for (var i = 0; i < todos.length; i++) {
-                                         if (todos[i].id === model.id) {
-                                           todos[i].completed = checked;
-                                           break;
-                                         }
-                                       }
-
-                                       pluginApi.pluginSettings.todos = todos;
-
-                                       var completedCount = 0;
-                                       for (var j = 0; j < todos.length; j++) {
-                                         if (todos[j].completed) {
-                                           completedCount++;
-                                         }
-                                       }
-                                       pluginApi.pluginSettings.completedCount = completedCount;
-
-                                       pluginApi.saveSettings();
-                                       loadTodos();
-                                     }
-                                   }
+                    // Position binding for non-dragging state
+                    y: {
+                      if (delegateItem.dragging) {
+                        return delegateItem.y;
                       }
 
-                      NText {
-                        text: model.text
-                        color: model.completed ? Color.mOnSurfaceVariant : Color.mOnSurface
-                        font.strikeout: model.completed
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
+                      // Check if any item is being dragged
+                      var draggedIndex = -1;
+                      var targetIndex = -1;
+                      for (var i = 0; i < todoListView.count; i++) {
+                        var item = todoListView.itemAtIndex(i);
+                        if (item && item.dragging) {
+                          draggedIndex = item.dragStartIndex;
+                          targetIndex = item.dragTargetIndex;
+                          break;
+                        }
                       }
-                      Item {
-                        id: deleteButtonContainer
-                        implicitWidth: Style.baseWidgetSize * 0.6
-                        implicitHeight: Style.baseWidgetSize * 0.6
 
-                        NIcon {
-                          id: deleteButtonIcon
-                          anchors.centerIn: parent
-                          icon: "x"
-                          pointSize: Style.fontSizeS
-                          color: Color.mOnSurfaceVariant
-                          opacity: 0.3
+                      // If an item is being dragged, adjust positions
+                      if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
+                        var currentIndex = delegateItem.index;
+
+                        if (draggedIndex < targetIndex) {
+                          // Dragging down: shift items up between draggedIndex and targetIndex
+                          if (currentIndex > draggedIndex && currentIndex <= targetIndex) {
+                            return (currentIndex - 1) * (delegateItem.height + delegateItem.itemSpacing);
+                          }
+                        } else {
+                          // Dragging up: shift items down between targetIndex and draggedIndex
+                          if (currentIndex >= targetIndex && currentIndex < draggedIndex) {
+                            return (currentIndex + 1) * (delegateItem.height + delegateItem.itemSpacing);
+                          }
+                        }
+                      }
+
+                      return delegateItem.index * (delegateItem.height + delegateItem.itemSpacing);
+                    }
+
+                    // Behavior for smooth animation when not dragging
+                    Behavior on y {
+                      enabled: !delegateItem.dragging
+                      NumberAnimation {
+                        duration: Style.animationNormal
+                        easing.type: Easing.OutQuad
+                      }
+                    }
+
+                    // The actual todo item rectangle
+                    Rectangle {
+                      anchors.fill: parent
+                      color: Color.mSurface
+                      radius: Style.radiusS
+
+                      RowLayout {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: Style.marginM
+                        anchors.rightMargin: Style.marginM
+                        spacing: Style.marginS
+
+                        // Drag handle
+                        Rectangle {
+                          id: dragHandle
+
+                          Layout.preferredWidth: Style.baseWidgetSize * 0.7
+                          Layout.preferredHeight: Style.baseWidgetSize * 0.7
+                          radius: Style.iRadiusXS
+                          color: dragHandleMouseArea.containsMouse ? Color.mSurfaceVariant : "transparent"
+
+                          Behavior on color {
+                            ColorAnimation {
+                              duration: Style.animationFast
+                            }
+                          }
+
+                          ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: Style.marginS
+
+                            Repeater {
+                              model: 3
+                              Rectangle {
+                                Layout.preferredWidth: Style.baseWidgetSize * 0.7 * 0.4
+                                Layout.preferredHeight: 2
+                                radius: 1
+                                color: Color.mOutline
+                              }
+                            }
+                          }
 
                           MouseArea {
-                            id: mouseArea
+                            id: dragHandleMouseArea
+
                             anchors.fill: parent
+                            cursorShape: Qt.SizeVerCursor
                             hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                              // Directly modify the todos list through pluginApi
-                              if (pluginApi) {
-                                var todos = pluginApi.pluginSettings.todos || [];
-                                var indexToRemove = -1;
+                            preventStealing: false
+                            z: 1000
 
-                                for (var i = 0; i < todos.length; i++) {
-                                  if (todos[i].id === model.id) {
-                                    indexToRemove = i;
-                                    break;
+                            onPressed: mouse => {
+                                         delegateItem.dragStartIndex = delegateItem.index;
+                                         delegateItem.dragTargetIndex = delegateItem.index;
+                                         delegateItem.dragStartY = delegateItem.y;
+                                         delegateItem.dragging = true;
+                                         delegateItem.z = 999;
+
+                                         // Signal that interaction started (prevents panel close)
+                                         preventStealing = true;
+                                       }
+
+                            onPositionChanged: mouse => {
+                                                 if (delegateItem.dragging) {
+                                                   var dy = mouse.y - dragHandle.height / 2;
+                                                   var newY = delegateItem.y + dy;
+
+                                                   // Constrain within bounds
+                                                   newY = Math.max(0, Math.min(newY, todoListView.contentHeight - delegateItem.height));
+                                                   delegateItem.y = newY;
+
+                                                   // Calculate target index (but don't apply yet)
+                                                   var targetIndex = Math.floor((newY + delegateItem.height / 2) / (delegateItem.height + delegateItem.itemSpacing));
+                                                   targetIndex = Math.max(0, Math.min(targetIndex, todoListView.count - 1));
+
+                                                   delegateItem.dragTargetIndex = targetIndex;
+                                                 }
+                                               }
+
+                            onReleased: {
+                              // Apply the model change now that drag is complete
+                              if (delegateItem.dragStartIndex !== -1 && delegateItem.dragTargetIndex !== -1 && delegateItem.dragStartIndex !== delegateItem.dragTargetIndex) {
+                                moveTodoItem(delegateItem.dragStartIndex, delegateItem.dragTargetIndex);
+                              }
+
+                              delegateItem.dragging = false;
+                              delegateItem.dragStartIndex = -1;
+                              delegateItem.dragTargetIndex = -1;
+                              delegateItem.z = 0;
+
+                              // Reset interaction prevention
+                              preventStealing = false;
+                            }
+
+                            onCanceled: {
+                              // Handle cancel (e.g., ESC key pressed during drag)
+                              delegateItem.dragging = false;
+                              delegateItem.dragStartIndex = -1;
+                              delegateItem.dragTargetIndex = -1;
+                              delegateItem.z = 0;
+
+                              // Reset interaction prevention
+                              preventStealing = false;
+                            }
+                          }
+                        }
+
+                        // Checkbox
+                        Item {
+                          Layout.preferredWidth: Style.baseWidgetSize * 0.7
+                          Layout.preferredHeight: Style.baseWidgetSize * 0.7
+
+                          Rectangle {
+                            id: box
+
+                            anchors.fill: parent
+                            radius: Style.iRadiusXS
+                            color: modelData.completed ? Color.mPrimary : Color.mSurface
+                            border.color: Color.mOutline
+                            border.width: Style.borderS
+
+                            Behavior on color {
+                              ColorAnimation {
+                                duration: Style.animationFast
+                              }
+                            }
+
+                            NIcon {
+                              visible: modelData.completed
+                              anchors.centerIn: parent
+                              anchors.horizontalCenterOffset: -1
+                              icon: "check"
+                              color: Color.mOnPrimary
+                              pointSize: Math.max(Style.fontSizeXS, Style.baseWidgetSize * 0.7 * 0.5)
+                            }
+
+                            MouseArea {
+                              anchors.fill: parent
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: {
+                                if (pluginApi) {
+                                  var todos = pluginApi.pluginSettings.todos || [];
+
+                                  for (var i = 0; i < todos.length; i++) {
+                                    if (todos[i].id === modelData.id) {
+                                      todos[i].completed = !modelData.completed;
+                                      break;
+                                    }
                                   }
-                                }
-
-                                if (indexToRemove !== -1) {
-                                  todos.splice(indexToRemove, 1);
 
                                   pluginApi.pluginSettings.todos = todos;
-                                  pluginApi.pluginSettings.count = todos.length;
 
-                                  // Recalculate completed count after removal
                                   var completedCount = 0;
                                   for (var j = 0; j < todos.length; j++) {
                                     if (todos[j].completed) {
@@ -297,37 +424,103 @@ Item {
 
                                   pluginApi.saveSettings();
                                   loadTodos();
-                                } else {
-                                  Logger.e("Todo", "Todo with ID " + model.id + " not found for deletion");
                                 }
-                              } else {
-                                Logger.e("Todo", "pluginApi is null, cannot delete todo");
                               }
                             }
                           }
+                        }
 
-                          states: [
-                            State {
-                              name: "hovered"
-                              when: mouseArea.containsMouse
-                              PropertyChanges {
-                                target: deleteButtonIcon
-                                opacity: 1.0
-                                color: Color.mError
+                        // Text
+                        NText {
+                          text: modelData.text
+                          color: modelData.completed ? Color.mOnSurfaceVariant : Color.mOnSurface
+                          font.strikeout: modelData.completed
+                          verticalAlignment: Text.AlignVCenter
+                          elide: Text.ElideRight
+                          Layout.fillWidth: true
+                        }
+
+                        // Delete button
+                        Item {
+                          id: deleteButtonContainer
+                          implicitWidth: Style.baseWidgetSize * 0.6
+                          implicitHeight: Style.baseWidgetSize * 0.6
+
+                          NIcon {
+                            id: deleteButtonIcon
+                            anchors.centerIn: parent
+                            icon: "x"
+                            pointSize: Style.fontSizeS
+                            color: Color.mOnSurfaceVariant
+                            opacity: 0.3
+
+                            MouseArea {
+                              id: mouseArea
+                              anchors.fill: parent
+                              hoverEnabled: true
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: {
+                                // Directly modify the todos list through pluginApi
+                                if (pluginApi) {
+                                  var todos = pluginApi.pluginSettings.todos || [];
+                                  var indexToRemove = -1;
+
+                                  for (var i = 0; i < todos.length; i++) {
+                                    if (todos[i].id === modelData.id) {
+                                      indexToRemove = i;
+                                      break;
+                                    }
+                                  }
+
+                                  if (indexToRemove !== -1) {
+                                    todos.splice(indexToRemove, 1);
+
+                                    pluginApi.pluginSettings.todos = todos;
+                                    pluginApi.pluginSettings.count = todos.length;
+
+                                    // Recalculate completed count after removal
+                                    var completedCount = 0;
+                                    for (var j = 0; j < todos.length; j++) {
+                                      if (todos[j].completed) {
+                                        completedCount++;
+                                      }
+                                    }
+                                    pluginApi.pluginSettings.completedCount = completedCount;
+
+                                    pluginApi.saveSettings();
+                                    loadTodos();
+                                  } else {
+                                    Logger.e("Todo", "Todo with ID " + modelData.id + " not found for deletion");
+                                  }
+                                } else {
+                                  Logger.e("Todo", "pluginApi is null, cannot delete todo");
+                                }
                               }
                             }
-                          ]
 
-                          transitions: [
-                            Transition {
-                              from: "*"; to: "hovered"
-                              NumberAnimation { properties: "opacity"; duration: 150 }
-                            },
-                            Transition {
-                              from: "hovered"; to: "*"
-                              NumberAnimation { properties: "opacity"; duration: 150 }
-                            }
-                          ]
+                            states: [
+                              State {
+                                name: "hovered"
+                                when: mouseArea.containsMouse
+                                PropertyChanges {
+                                  target: deleteButtonIcon
+                                  opacity: 1.0
+                                  color: Color.mError
+                                }
+                              }
+                            ]
+
+                            transitions: [
+                              Transition {
+                                from: "*"; to: "hovered"
+                                NumberAnimation { properties: "opacity"; duration: 150 }
+                              },
+                              Transition {
+                                from: "hovered"; to: "*"
+                                NumberAnimation { properties: "opacity"; duration: 150 }
+                              }
+                            ]
+                          }
                         }
                       }
                     }
@@ -383,6 +576,27 @@ Item {
         newTodoInput.text = "";
         loadTodos(); // Reload todos to update view
       }
+    }
+  }
+
+  function moveTodoItem(fromIndex, toIndex) {
+    if (fromIndex === toIndex)
+      return;
+    if (fromIndex < 0 || fromIndex >= root.rawTodos.length)
+      return;
+    if (toIndex < 0 || toIndex >= root.rawTodos.length)
+      return;
+
+    // Create a new array with item moved
+    var newTodos = root.rawTodos.slice();
+    var item = newTodos.splice(fromIndex, 1)[0];
+    newTodos.splice(toIndex, 0, item);
+
+    // Update the plugin settings
+    if (pluginApi) {
+      pluginApi.pluginSettings.todos = newTodos;
+      pluginApi.saveSettings();
+      loadTodos(); // Reload to update the view
     }
   }
 }
