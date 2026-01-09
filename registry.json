@@ -241,6 +241,21 @@
       "lastUpdated": "2026-01-08T08:07:26-03:00"
     },
     {
+      "id": "timer",
+      "name": "Timer",
+      "version": "1.0.0",
+      "author": "Noctalia Team",
+      "description": "A timer and stopwatch plugin for the bar & control center.",
+      "repository": "https://github.com/noctalia-dev/noctalia-plugins",
+      "minNoctaliaVersion": "3.6.0",
+      "license": "MIT",
+      "tags": [
+        "Bar",
+        "Utility"
+      ],
+      "lastUpdated": "2026-01-09T16:51:02+01:00"
+    },
+    {
       "id": "todo",
       "name": "Todo List",
       "version": "1.6.0",
