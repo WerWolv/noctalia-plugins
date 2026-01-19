@@ -29,10 +29,13 @@ Item {
 
   readonly property string emptyBrowsingMessage: selectedCategory === "recent" ? "No recently used characters" : ""
 
+  // Cache directory - create from pluginDir
+  readonly property string cacheDir: pluginApi?.pluginDir ? pluginApi.pluginDir + "/cache" : ""
+
   // File paths
-  readonly property string usageFilePath: pluginApi ? pluginApi.cacheDir + "/unicode_usage.json" : ""
-  readonly property string unicodeDataPath: pluginApi ? pluginApi.cacheDir + "/UnicodeData.txt" : ""
-  readonly property string nameAliasesPath: pluginApi ? pluginApi.cacheDir + "/NameAliases.txt" : ""
+  readonly property string usageFilePath: cacheDir ? cacheDir + "/unicode_usage.json" : ""
+  readonly property string unicodeDataPath: cacheDir ? cacheDir + "/UnicodeData.txt" : ""
+  readonly property string nameAliasesPath: cacheDir ? cacheDir + "/NameAliases.txt" : ""
   readonly property string unicodeDataUrl: "https://unicode.org/Public/15.1.0/ucd/UnicodeData.txt"
   readonly property string nameAliasesUrl: "https://unicode.org/Public/15.1.0/ucd/NameAliases.txt"
 
@@ -98,12 +101,17 @@ Item {
 
   // Initialize provider
   function init() {
-    Logger.i("UnicodeProvider", "init called, pluginApi:", pluginApi);
-    if (pluginApi && pluginApi.cacheDir) {
+    Logger.i("UnicodeProvider", "init called");
+    Logger.i("UnicodeProvider", "cacheDir:", cacheDir);
+    Logger.i("UnicodeProvider", "usageFilePath:", usageFilePath);
+    Logger.i("UnicodeProvider", "unicodeDataPath:", unicodeDataPath);
+    if (cacheDir) {
       usageFile.path = usageFilePath;
       usageFile.reload();
       unicodeDataFile.path = unicodeDataPath;
       unicodeDataFile.reload();
+    } else {
+      Logger.w("UnicodeProvider", "Cannot init - cacheDir not available");
     }
   }
 
@@ -164,6 +172,8 @@ Item {
     var results = [], q = query.toLowerCase().trim();
     var hexQuery = q.replace(/^u\+?/i, "");
 
+    Logger.i("UnicodeProvider", "Search query:", q, "namesLoaded:", namesLoaded, "unicodeNames count:", Object.keys(unicodeNames).length);
+
     // Hex codepoint search
     if (/^[0-9a-f]+$/i.test(hexQuery) && hexQuery.length >= 2) {
       var cp = parseInt(hexQuery, 16);
@@ -184,6 +194,8 @@ Item {
         }
       }
     }
+
+    Logger.i("UnicodeProvider", "Search results:", results.length);
 
     // Deduplicate
     var seen = new Set();
@@ -217,10 +229,21 @@ Item {
   }
 
   function _downloadUnicodeData() {
-    if (!pluginApi || !pluginApi.cacheDir) return;
-    Logger.d("UnicodeProvider", "Downloading Unicode data...");
+    if (!cacheDir) {
+      Logger.w("UnicodeProvider", "Cannot download: cacheDir not available");
+      return;
+    }
+    Logger.i("UnicodeProvider", "Downloading Unicode data from unicode.org...");
+    Logger.i("UnicodeProvider", "Cache dir:", cacheDir);
+
+    // Download with better error handling and logging
     Quickshell.execDetached(["sh", "-c",
-      `mkdir -p "${pluginApi.cacheDir}" && curl -s -o "${unicodeDataPath}" "${unicodeDataUrl}" && curl -s -o "${nameAliasesPath}" "${nameAliasesUrl}"`
+      `mkdir -p "${cacheDir}" && \
+       echo "Downloading UnicodeData.txt..." && \
+       curl -f -s -S -o "${unicodeDataPath}" "${unicodeDataUrl}" && \
+       echo "Downloading NameAliases.txt..." && \
+       curl -f -s -S -o "${nameAliasesPath}" "${nameAliasesUrl}" && \
+       echo "Download complete" || echo "Download failed"`
     ]);
     downloadTimer.start();
   }
@@ -289,7 +312,7 @@ Item {
   // Format a character entry for the results list
   function formatCharEntry(charData) {
     var charValue = charData.char;
-    var title = charValue + "  " + (charData.name || charData.hex);
+    var title = charData.name || charData.hex;
     var desc = charData.name ? charData.hex : getCategoryName(charData.category);
 
     return {
@@ -297,6 +320,7 @@ Item {
       "description": desc,
       "icon": null,
       "isImage": false,
+      "displayString": charValue,
       "autoPasteText": charValue,
       "provider": root,
       "onAutoPaste": function() {
@@ -312,16 +336,20 @@ Item {
   // Timers
   Timer {
     id: downloadTimer
-    interval: 3000
-    onTriggered: unicodeDataFile.reload()
+    interval: 5000  // Increased to 5 seconds for slower connections
+    repeat: false
+    onTriggered: {
+      Logger.i("UnicodeProvider", "Download timer triggered, reloading files...");
+      unicodeDataFile.reload();
+    }
   }
 
   Timer {
     id: saveTimer
     interval: 1000
     onTriggered: {
-      if (pluginApi && pluginApi.cacheDir) {
-        Quickshell.execDetached(["sh", "-c", `mkdir -p "${pluginApi.cacheDir}" && echo '${JSON.stringify(usageCounts)}' > "${usageFilePath}"`]);
+      if (cacheDir) {
+        Quickshell.execDetached(["sh", "-c", `mkdir -p "${cacheDir}" && echo '${JSON.stringify(usageCounts)}' > "${usageFilePath}"`]);
       }
     }
   }
@@ -334,17 +362,22 @@ Item {
     watchChanges: false
     onLoaded: {
       var content = text();
+      Logger.i("UnicodeProvider", "UnicodeData loaded, size:", content.length);
       if (content && content.length > 1000) {
+        Logger.i("UnicodeProvider", "Parsing UnicodeData...");
         root.unicodeNames = root._parseUnicodeData(content);
+        Logger.i("UnicodeProvider", "Parsed", Object.keys(root.unicodeNames).length, "character names");
         nameAliasesFile.path = root.nameAliasesPath;
         nameAliasesFile.reload();
       } else {
+        Logger.w("UnicodeProvider", "UnicodeData too small or empty, downloading...");
         root._downloadUnicodeData();
       }
     }
     onLoadFailed: {
+      Logger.w("UnicodeProvider", "UnicodeData load failed, downloading...");
       root._downloadUnicodeData();
-      root.loaded = true;
+      // Don't set loaded=true yet, wait for download to complete
     }
   }
 
@@ -355,12 +388,19 @@ Item {
     watchChanges: false
     onLoaded: {
       var content = text();
-      if (content) root.unicodeNames = root._parseNameAliases(content, root.unicodeNames);
+      Logger.i("UnicodeProvider", "NameAliases loaded, size:", content.length);
+      if (content) {
+        root.unicodeNames = root._parseNameAliases(content, root.unicodeNames);
+        Logger.i("UnicodeProvider", "Total names after aliases:", Object.keys(root.unicodeNames).length);
+      }
       root.namesLoaded = true;
       root._categoryCache = {};
       root.loaded = true;
+      Logger.i("UnicodeProvider", "Unicode name database ready!");
     }
     onLoadFailed: {
+      Logger.w("UnicodeProvider", "NameAliases load failed, continuing without aliases");
+      root.namesLoaded = false;  // Names won't be searchable
       root.loaded = true;
     }
   }
@@ -379,8 +419,8 @@ Item {
     }
     onLoadFailed: {
       root.usageCounts = {};
-      if (pluginApi && pluginApi.cacheDir) {
-        Quickshell.execDetached(["sh", "-c", `mkdir -p "${pluginApi.cacheDir}" && echo '{}' > "${usageFilePath}"`]);
+      if (cacheDir) {
+        Quickshell.execDetached(["sh", "-c", `mkdir -p "${cacheDir}" && echo '{}' > "${usageFilePath}"`]);
       }
     }
   }
