@@ -18,6 +18,7 @@ Item {
   property ListModel filteredTodosModel: ListModel {}
   property bool showCompleted: false
   property var rawTodos: []
+  property bool initialLoadComplete: false
 
   Binding {
     target: root
@@ -88,6 +89,8 @@ Item {
       root.showCompleted = pluginApi?.pluginSettings?.showCompleted !== undefined
                            ? pluginApi.pluginSettings.showCompleted
                            : pluginApi?.manifest?.metadata?.defaultSettings?.showCompleted || false;
+      // Reset the initial load flag before loading
+      root.initialLoadComplete = false;
       loadTodos();
     }
   }
@@ -95,9 +98,6 @@ Item {
   function loadTodos() {
     // Store the current scroll position
     var currentScrollPos = todoListView ? todoListView.contentY : 0;
-
-    todosModel.clear();
-    filteredTodosModel.clear();
 
     var pluginTodos = root.rawTodos;
     var currentPageId = pluginApi?.pluginSettings?.current_page_id || 0;
@@ -107,22 +107,46 @@ Item {
       return todo.pageId === currentPageId;
     });
 
-    // Populate both models in a single loop
-    for (var i = 0; i < pageTodos.length; i++) {
-      var todoItem = {
-        id: pageTodos[i].id,
-        text: pageTodos[i].text,
-        completed: pageTodos[i].completed === true,
-        createdAt: pageTodos[i].createdAt,
-        pageId: pageTodos[i].pageId
-      };
+    // Check if there are actual changes compared to current model
+    var hasChanges = false;
+    if (todosModel.count !== pageTodos.length) {
+      hasChanges = true;
+    } else {
+      // Compare each item to see if there are changes
+      for (var i = 0; i < pageTodos.length; i++) {
+        var existingItem = todosModel.get(i);
+        if (!existingItem ||
+            existingItem.id !== pageTodos[i].id ||
+            existingItem.text !== pageTodos[i].text ||
+            existingItem.completed !== pageTodos[i].completed) {
+          hasChanges = true;
+          break;
+        }
+      }
+    }
 
-      // Add to full model
-      todosModel.append(todoItem);
+    // Only clear and rebuild if there are actual changes
+    if (hasChanges) {
+      todosModel.clear();
+      filteredTodosModel.clear();
 
-      // Add to filtered model if it meets criteria
-      if (showCompleted || !pageTodos[i].completed) {
-        filteredTodosModel.append(todoItem);
+      // Populate both models in a single loop
+      for (var i = 0; i < pageTodos.length; i++) {
+        var todoItem = {
+          id: pageTodos[i].id,
+          text: pageTodos[i].text,
+          completed: pageTodos[i].completed === true,
+          createdAt: pageTodos[i].createdAt,
+          pageId: pageTodos[i].pageId
+        };
+
+        // Add to full model
+        todosModel.append(todoItem);
+
+        // Add to filtered model if it meets criteria
+        if (showCompleted || !pageTodos[i].completed) {
+          filteredTodosModel.append(todoItem);
+        }
       }
     }
 
@@ -132,6 +156,9 @@ Item {
         todoListView.contentY = currentScrollPos;
       });
     }
+
+    // Mark that initial load is complete
+    root.initialLoadComplete = true;
   }
 
   onPluginApiChanged: {
@@ -145,7 +172,7 @@ Item {
 
   Timer {
     id: settingsWatcher
-    interval: 200
+    interval: 100
     running: !!pluginApi
     repeat: true
     onTriggered: {
@@ -935,10 +962,11 @@ Item {
               Layout.fillWidth: true
               Layout.fillHeight: true
               Layout.alignment: Qt.AlignCenter
-              visible: root.filteredTodosModel.count === 0
+              visible: root.filteredTodosModel.count === 0 && root.initialLoadComplete
 
               NText {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: -100
                 text: pluginApi?.tr("panel.empty_state.message") || "No todo items yet"
                 color: Color.mOnSurfaceVariant
                 font.pointSize: Style.fontSizeM
