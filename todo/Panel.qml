@@ -9,6 +9,50 @@ Item {
   id: root
 
   property var pluginApi: null
+
+  // Internal utility functions
+  function updateTodoProperties(todoId, updates) {
+    if (!pluginApi) return false;
+
+    var todos = pluginApi.pluginSettings.todos || [];
+    for (var i = 0; i < todos.length; i++) {
+      if (todos[i].id === todoId) {
+        // Preserve all existing properties, only update specified fields
+        todos[i] = {
+          id: todos[i].id,
+          text: updates.text !== undefined ? updates.text : todos[i].text,
+          completed: updates.completed !== undefined ? updates.completed : todos[i].completed,
+          createdAt: todos[i].createdAt,
+          pageId: todos[i].pageId || 0,
+          priority: updates.priority !== undefined ? updates.priority : (todos[i].priority || "medium")
+        };
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function calculateCompletedCount() {
+    if (!pluginApi) return 0;
+
+    var todos = pluginApi.pluginSettings.todos || [];
+    var completedCount = 0;
+    for (var j = 0; j < todos.length; j++) {
+      if (todos[j].completed) {
+        completedCount++;
+      }
+    }
+    return completedCount;
+  }
+
+  function findPageIndexInTodos(pageTodos, targetItem) {
+    for (var i = 0; i < pageTodos.length; i++) {
+      if (pageTodos[i].id === targetItem.id) {
+        return i;
+      }
+    }
+    return -1;
+  }
   readonly property var geometryPlaceholder: panelContainer
   property real contentPreferredWidth: 700 * Style.uiScaleRatio
   property real contentPreferredHeight: 500 * Style.uiScaleRatio
@@ -92,6 +136,72 @@ Item {
     }
   }
 
+  // Helper function to get priority color
+  function getPriorityColor(priority) {
+    // Ensure priority is a valid string
+    if (!priority || typeof priority !== 'string') {
+      priority = "medium";
+    }
+
+    // Validate priority value
+    var validPriorities = ["high", "medium", "low"];
+    if (validPriorities.indexOf(priority) === -1) {
+      priority = "medium"; // Default to medium if invalid
+    }
+
+    // Simplified implementation using helper functions
+    if (!pluginApi) {
+      return getDefaultColor(priority);
+    }
+
+    var useCustomColors = pluginApi?.pluginSettings?.useCustomColors;
+    if (!useCustomColors) {
+      return getThemeColor(priority);
+    }
+
+    return getCustomColor(priority);
+  }
+
+  // Helper function to get default color when pluginApi is not available
+  function getDefaultColor(priority) {
+    if (priority === "high") {
+      return Color.mError;
+    } else if (priority === "low") {
+      return Color.mOnSurfaceVariant;
+    } else {
+      return Color.mPrimary;
+    }
+  }
+
+  // Helper function to get theme color when custom colors are disabled
+  function getThemeColor(priority) {
+    if (priority === "high") {
+      return Color.mError;
+    } else if (priority === "low") {
+      return Color.mOnSurfaceVariant;
+    } else {
+      return Color.mPrimary;
+    }
+  }
+
+  // Helper function to get custom color when custom colors are enabled
+  function getCustomColor(priority) {
+    var priorityColors = pluginApi?.pluginSettings?.priorityColors || {
+      "high": Color.mError,
+      "medium": Color.mPrimary,
+      "low": Color.mOnSurfaceVariant
+    };
+
+    if (priority === "high") {
+      return priorityColors.high || Color.mError;
+    } else if (priority === "low") {
+      return priorityColors.low || Color.mOnSurfaceVariant;
+    } else {
+      return priorityColors.medium || Color.mPrimary;
+    }
+  }
+
+
   Component.onCompleted: {
     if (pluginApi) {
       Logger.i("Todo", "Panel initialized");
@@ -114,28 +224,37 @@ Item {
     var pluginTodos = root.rawTodos;
     var currentPageId = pluginApi?.pluginSettings?.current_page_id || 0;
 
-    // Filter todos for the current page
-    var pageTodos = pluginTodos.filter(function(todo) {
-      return todo.pageId === currentPageId;
-    });
+    // Process todos in a single pass
+    var pageTodos = [];
+    var filteredPageTodos = [];
 
-    // Populate both models in a single loop
-    for (var i = 0; i < pageTodos.length; i++) {
-      var todoItem = {
-        id: pageTodos[i].id,
-        text: pageTodos[i].text,
-        completed: pageTodos[i].completed === true,
-        createdAt: pageTodos[i].createdAt,
-        pageId: pageTodos[i].pageId
-      };
+    for (var i = 0; i < pluginTodos.length; i++) {
+      var todo = pluginTodos[i];
+      if (todo.pageId === currentPageId) {
+        var todoItem = {
+          id: todo.id,
+          text: todo.text,
+          completed: todo.completed === true,
+          createdAt: todo.createdAt,
+          pageId: todo.pageId,
+          priority: todo.priority || "medium"
+        };
 
-      // Add to full model
-      todosModel.append(todoItem);
+        pageTodos.push(todoItem);
 
-      // Add to filtered model if it meets criteria
-      if (showCompleted || !pageTodos[i].completed) {
-        filteredTodosModel.append(todoItem);
+        if (showCompleted || !todo.completed) {
+          filteredPageTodos.push(todoItem);
+        }
       }
+    }
+
+    // Populate models
+    for (var j = 0; j < pageTodos.length; j++) {
+      todosModel.append(pageTodos[j]);
+    }
+
+    for (var k = 0; k < filteredPageTodos.length; k++) {
+      filteredTodosModel.append(filteredPageTodos[k]);
     }
 
     // Restore the scroll position
@@ -318,9 +437,97 @@ Item {
                 Keys.onReturnPressed: addTodo()
               }
 
+              // Priority selector using a simplified approach
+              Item {
+                Layout.preferredWidth: 120
+                Layout.preferredHeight: Style.baseWidgetSize
+
+                Rectangle {
+                  anchors.fill: parent
+                  color: "transparent"
+                  border.color: Color.mOutline
+                  border.width: 1
+                  radius: Style.iRadiusS
+
+                  Row {
+                    anchors.fill: parent
+                    spacing: 1
+
+                    Rectangle {
+                      id: highPriorityBtn
+                      width: (parent.width - 2) / 3
+                      height: parent.height
+                      color: priorityGroup.currentPriority === "high" ? Color.mError : "transparent"
+                      radius: Style.iRadiusS
+
+                      NText {
+                        anchors.centerIn: parent
+                        text: "H"
+                        color: priorityGroup.currentPriority === "high" ? Color.mOnPrimary : Color.mError
+                        font.pointSize: Style.fontSizeS
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        onClicked: priorityGroup.currentPriority = "high"
+                      }
+                    }
+
+                    Rectangle {
+                      id: mediumPriorityBtn
+                      width: (parent.width - 2) / 3
+                      height: parent.height
+                      color: priorityGroup.currentPriority === "medium" ? Color.mPrimary : "transparent"
+                      radius: Style.iRadiusS
+
+                      NText {
+                        anchors.centerIn: parent
+                        text: "M"
+                        color: priorityGroup.currentPriority === "medium" ? Color.mOnPrimary : Color.mPrimary
+                        font.pointSize: Style.fontSizeS
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        onClicked: priorityGroup.currentPriority = "medium"
+                      }
+                    }
+
+                    Rectangle {
+                      id: lowPriorityBtn
+                      width: parent.width - (highPriorityBtn.width + mediumPriorityBtn.width + 2)
+                      height: parent.height
+                      color: priorityGroup.currentPriority === "low" ? Color.mOnSurfaceVariant : "transparent"
+                      radius: Style.iRadiusS
+
+                      NText {
+                        anchors.centerIn: parent
+                        text: "L"
+                        color: priorityGroup.currentPriority === "low" ? Color.mOnSurface : Color.mOnSurfaceVariant
+                        font.pointSize: Style.fontSizeS
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        onClicked: priorityGroup.currentPriority = "low"
+                      }
+                    }
+                  }
+                }
+              }
+
+              // Define the priority group as a separate object
+              QtObject {
+                id: priorityGroup
+                property string currentPriority: "medium"
+              }
+
               NIconButton {
                 icon: "plus"
-                onClicked: addTodo()
+                onClicked: {
+                  addTodo();
+                  priorityGroup.currentPriority = "medium"; // Reset to default after adding
+                }
               }
             }
 
@@ -363,14 +570,11 @@ Item {
                   if (pluginApi && todoTextEdit.text.trim() !== "") {
                     var todos = pluginApi.pluginSettings.todos || [];
 
-                    for (var i = 0; i < todos.length; i++) {
-                      if (todos[i].id === modelData.id) {
-                        todos[i].text = todoTextEdit.text.trim();
-                        break;
-                      }
-                    }
+                    updateTodoProperties(modelData.id, {
+                      text: todoTextEdit.text.trim()
+                    });
 
-                    pluginApi.pluginSettings.todos = todos;
+                    pluginApi.pluginSettings.todos = pluginApi.pluginSettings.todos;
                     pluginApi.saveSettings();
 
                     root.loadTodos();
@@ -566,6 +770,32 @@ Item {
                       }
                     }
 
+                    // Priority indicator - a colored vertical line
+                    Rectangle {
+                      id: priorityIndicator
+                      Layout.preferredWidth: 4  // Width of the priority line
+                      Layout.preferredHeight: parent.height - Style.marginS
+                      Layout.alignment: Qt.AlignVCenter  // Align vertically centered
+                      radius: 2
+
+                      // Determine color based on priority using helper function
+                      color: {
+                        if (pluginApi) {
+                          return getPriorityColor(modelData.priority || "medium");
+                        } else {
+                          // Fallback to default colors if pluginApi is not ready
+                          var priority = modelData.priority || "medium";
+                          if (priority === "high") {
+                            return Color.mError;
+                          } else if (priority === "low") {
+                            return Color.mOnSurfaceVariant;
+                          } else {
+                            return Color.mPrimary;
+                          }
+                        }
+                      }
+                    }
+
                     // Checkbox
                     Item {
                       Layout.preferredWidth: Style.baseWidgetSize * 0.7
@@ -602,21 +832,13 @@ Item {
                             if (pluginApi) {
                               var todos = pluginApi.pluginSettings.todos || [];
 
-                              for (var i = 0; i < todos.length; i++) {
-                                if (todos[i].id === modelData.id) {
-                                  todos[i].completed = !modelData.completed;
-                                  break;
-                                }
-                              }
+                              updateTodoProperties(modelData.id, {
+                                completed: !modelData.completed
+                              });
 
-                              pluginApi.pluginSettings.todos = todos;
+                              pluginApi.pluginSettings.todos = pluginApi.pluginSettings.todos;
 
-                              var completedCount = 0;
-                              for (var j = 0; j < todos.length; j++) {
-                                if (todos[j].completed) {
-                                  completedCount++;
-                                }
-                              }
+                              var completedCount = calculateCompletedCount();
                               pluginApi.pluginSettings.completedCount = completedCount;
 
                               moveTodoToCorrectPosition(modelData.id);
@@ -975,14 +1197,15 @@ Item {
       if (pluginApi) {
         var todos = pluginApi.pluginSettings.todos || [];
         var currentPageId = pluginApi.pluginSettings.current_page_id || 0;
+        var selectedPriority = priorityGroup.currentPriority || "medium";
 
         var newTodo = {
-          id: Date.now()
-              ,
+          id: Date.now(),
           text: newTodoInput.text.trim(),
           completed: false,
           createdAt: new Date().toISOString(),
-          pageId: currentPageId
+          pageId: currentPageId,
+          priority: selectedPriority
         };
 
         todos.unshift(newTodo);
@@ -994,7 +1217,7 @@ Item {
         pluginApi.saveSettings();
 
         newTodoInput.text = "";
-        loadTodos();
+        loadTodos(); // Load the updated list
       }
     }
   }

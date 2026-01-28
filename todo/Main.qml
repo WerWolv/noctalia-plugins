@@ -28,20 +28,47 @@ Item {
         pluginApi.pluginSettings.isExpanded = false;
       }
 
-      // Ensure all existing todos have a pageId
+      // Ensure all existing todos have a pageId and priority
       var todos = pluginApi.pluginSettings.todos;
       for (var i = 0; i < todos.length; i++) {
         if (todos[i].pageId === undefined) {
           todos[i].pageId = 0;
         }
+        // Ensure priority is a string and has a valid value
+        if (todos[i].priority === undefined || typeof todos[i].priority !== 'string') {
+          todos[i].priority = "medium"; // Default priority
+        } else {
+          // Validate the priority value
+          var validPriorities = ["high", "medium", "low"];
+          if (validPriorities.indexOf(todos[i].priority) === -1) {
+            todos[i].priority = "medium"; // Default to medium if invalid
+          }
+        }
+      }
+
+      // Initialize useCustomColors if not present
+      if (pluginApi.pluginSettings.useCustomColors === undefined) {
+        pluginApi.pluginSettings.useCustomColors = false;
+      }
+
+      // Initialize priority colors if not present
+      if (!pluginApi.pluginSettings.priorityColors) {
+        pluginApi.pluginSettings.priorityColors = {
+          "high": Color.mError,       // High priority - red/error color
+          "medium": Color.mPrimary,   // Medium priority - primary color
+          "low": Color.mOnSurfaceVariant // Low priority - surface variant color
+        };
       }
 
       pluginApi.saveSettings();
     }
   }
 
+
+
   IpcHandler {
     target: "plugin:todo"
+
 
     function togglePanel() {
       pluginApi.withCurrentScreen(screen => {
@@ -49,7 +76,7 @@ Item {
       });
     }
 
-    function addTodo(text: string, pageId: int) {
+    function addTodo(text: string, pageId: int, priority: string) {
       if (pluginApi && text) {
         var pages = pluginApi.pluginSettings.pages || [];
         var isValidPageId = false;
@@ -66,6 +93,12 @@ Item {
           return;
         }
 
+        // Validate priority - default to medium if not provided
+        var validPriorities = ["high", "medium", "low"];
+        if (!priority || validPriorities.indexOf(priority) === -1) {
+          priority = "medium"; // Default to medium if invalid or not provided
+        }
+
         var todos = pluginApi.pluginSettings.todos || [];
 
         var newTodo = {
@@ -73,7 +106,8 @@ Item {
           text: text,
           completed: false,
           createdAt: new Date().toISOString(),
-          pageId: pageId
+          pageId: pageId,
+          priority: priority
         };
 
         todos.push(newTodo);
@@ -86,8 +120,13 @@ Item {
       }
     }
 
+    // Backward compatibility function
+    function addTodoOld(text: string, pageId: int) {
+      addTodo(text, pageId, "medium"); // Default to medium priority
+    }
+
     function addTodoDefault(text: string) {
-      addTodo(text, 0);
+      addTodo(text, 0, "medium"); // Default to medium priority
     }
 
     function toggleTodo(id: int) {
@@ -97,7 +136,15 @@ Item {
 
         for (var i = 0; i < todos.length; i++) {
           if (todos[i].id === id) {
-            todos[i].completed = !todos[i].completed;
+            // Preserve all properties when updating
+            todos[i] = {
+              id: todos[i].id,
+              text: todos[i].text,
+              completed: !todos[i].completed,
+              createdAt: todos[i].createdAt,
+              pageId: todos[i].pageId,
+              priority: todos[i].priority || "medium"
+            };
             todoFound = true;
             break;
           }

@@ -9,6 +9,41 @@ DraggableDesktopWidget {
   id: root
 
   property var pluginApi: null
+
+  // Internal utility functions
+  function updateTodoProperties(todoId, updates) {
+    if (!pluginApi) return false;
+
+    var todos = pluginApi.pluginSettings.todos || [];
+    for (var i = 0; i < todos.length; i++) {
+      if (todos[i].id === todoId) {
+        // Preserve all existing properties, only update specified fields
+        todos[i] = {
+          id: todos[i].id,
+          text: updates.text !== undefined ? updates.text : todos[i].text,
+          completed: updates.completed !== undefined ? updates.completed : todos[i].completed,
+          createdAt: todos[i].createdAt,
+          pageId: todos[i].pageId || 0,
+          priority: updates.priority !== undefined ? updates.priority : (todos[i].priority || "medium")
+        };
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function calculateCompletedCount() {
+    if (!pluginApi) return 0;
+
+    var todos = pluginApi.pluginSettings.todos || [];
+    var completedCount = 0;
+    for (var j = 0; j < todos.length; j++) {
+      if (todos[j].completed) {
+        completedCount++;
+      }
+    }
+    return completedCount;
+  }
   property bool expanded: pluginApi?.pluginSettings?.isExpanded !== undefined ? pluginApi.pluginSettings.isExpanded : (pluginApi?.manifest?.metadata?.defaultSettings?.isExpanded || false)
   property bool showCompleted: pluginApi?.pluginSettings?.showCompleted !== undefined ? pluginApi.pluginSettings.showCompleted : pluginApi?.manifest?.metadata?.defaultSettings?.showCompleted
   property ListModel filteredTodosModel: ListModel {}
@@ -66,6 +101,72 @@ DraggableDesktopWidget {
     }
   }
 
+  // Helper function to get priority color
+  function getPriorityColor(priority) {
+    // Ensure priority is a valid string
+    if (!priority || typeof priority !== 'string') {
+      priority = "medium";
+    }
+
+    // Validate priority value
+    var validPriorities = ["high", "medium", "low"];
+    if (validPriorities.indexOf(priority) === -1) {
+      priority = "medium"; // Default to medium if invalid
+    }
+
+    // Simplified implementation using helper functions
+    if (!pluginApi) {
+      return getDefaultColor(priority);
+    }
+
+    var useCustomColors = pluginApi?.pluginSettings?.useCustomColors;
+    if (!useCustomColors) {
+      return getThemeColor(priority);
+    }
+
+    return getCustomColor(priority);
+  }
+
+  // Helper function to get default color when pluginApi is not available
+  function getDefaultColor(priority) {
+    if (priority === "high") {
+      return Color.mError;
+    } else if (priority === "low") {
+      return Color.mOnSurfaceVariant;
+    } else {
+      return Color.mPrimary;
+    }
+  }
+
+  // Helper function to get theme color when custom colors are disabled
+  function getThemeColor(priority) {
+    if (priority === "high") {
+      return Color.mError;
+    } else if (priority === "low") {
+      return Color.mOnSurfaceVariant;
+    } else {
+      return Color.mPrimary;
+    }
+  }
+
+  // Helper function to get custom color when custom colors are enabled
+  function getCustomColor(priority) {
+    var priorityColors = pluginApi?.pluginSettings?.priorityColors || {
+      "high": Color.mError,
+      "medium": Color.mPrimary,
+      "low": Color.mOnSurfaceVariant
+    };
+
+    if (priority === "high") {
+      return priorityColors.high || Color.mError;
+    } else if (priority === "low") {
+      return priorityColors.low || Color.mOnSurfaceVariant;
+    } else {
+      return priorityColors.medium || Color.mPrimary;
+    }
+  }
+
+
   showBackground: (pluginApi && pluginApi.pluginSettings ? (pluginApi.pluginSettings.showBackground !== undefined ? pluginApi.pluginSettings.showBackground : pluginApi?.manifest?.metadata?.defaultSettings?.showBackground) : pluginApi?.manifest?.metadata?.defaultSettings?.showBackground)
 
   readonly property color todoBg: showBackground ? Qt.rgba(0, 0, 0, 0.2) : "transparent"
@@ -107,8 +208,7 @@ DraggableDesktopWidget {
   }
 
   function updateFilteredTodos() {
-    if (!pluginApi)
-      return;
+    if (!pluginApi) return;
 
     filteredTodosModel.clear();
 
@@ -116,26 +216,23 @@ DraggableDesktopWidget {
     var currentShowCompleted = getCurrentShowCompleted();
     var currentPageId = pluginApi?.pluginSettings?.current_page_id || 0;
 
-    // Filter todos for the current page
-    var pageTodos = pluginTodos.filter(function(todo) {
-      return todo.pageId === currentPageId;
-    });
+    // Process todos in a single pass
+    for (var i = 0; i < pluginTodos.length; i++) {
+      var todo = pluginTodos[i];
 
-    var filtered = pageTodos;
-
-    if (!currentShowCompleted) {
-      filtered = pageTodos.filter(function (todo) {
-        return !todo.completed;
-      });
-    }
-
-    for (var i = 0; i < filtered.length; i++) {
-      filteredTodosModel.append({
-                                  id: filtered[i].id,
-                                  text: filtered[i].text,
-                                  completed: filtered[i].completed,
-                                  pageId: filtered[i].pageId || 0
-                                });
+      // Check if todo belongs to current page
+      if (todo.pageId === currentPageId) {
+        // Check if completed items should be shown
+        if (currentShowCompleted || !todo.completed) {
+          filteredTodosModel.append({
+            id: todo.id,
+            text: todo.text,
+            completed: todo.completed,
+            pageId: todo.pageId || 0,
+            priority: todo.priority || "medium"
+          });
+        }
+      }
     }
   }
 
@@ -347,14 +444,14 @@ DraggableDesktopWidget {
                       id: customCheckboxContainer
                       width: scaledBaseWidgetSize * 0.7  // Slightly larger touch area
                       height: scaledBaseWidgetSize * 0.7
-                      anchors.left: parent.left
+                      anchors.left: priorityIndicator.right  // Position relative to priority indicator
                       anchors.verticalCenter: parent.verticalCenter
 
                       Rectangle {
                         id: customCheckbox
                         width: scaledBaseWidgetSize * 0.5
                         height: scaledBaseWidgetSize * 0.5
-                        radius: Style.iRadiusXS
+                        radius: Style.iRadiusXXS
                         color: showBackground ? (model.completed ? Color.mPrimary : Color.mSurface) : "transparent"
                         border.color: Color.mOutline
                         border.width: Style.borderS
@@ -376,37 +473,60 @@ DraggableDesktopWidget {
 
                           onClicked: {
                             if (pluginApi) {
+                              // Get the current todo to determine the new completed state
                               var todos = pluginApi.pluginSettings.todos || [];
+                              var currentTodo = null;
 
                               for (var i = 0; i < todos.length; i++) {
                                 if (todos[i].id === model.id) {
-                                  // Preserve all properties including pageId when updating
-                                  todos[i] = {
-                                    id: todos[i].id,
-                                    text: todos[i].text,
-                                    completed: !todos[i].completed,
-                                    createdAt: todos[i].createdAt,
-                                    pageId: todos[i].pageId || 0
-                                  };
+                                  currentTodo = todos[i];
                                   break;
                                 }
                               }
 
-                              pluginApi.pluginSettings.todos = todos;
+                              if (currentTodo) {
+                                // Use the internal utility function to update the todo
+                                updateTodoProperties(model.id, {
+                                  completed: !currentTodo.completed
+                                });
 
-                              var completedCount = 0;
-                              for (var j = 0; j < todos.length; j++) {
-                                if (todos[j].completed) {
-                                  completedCount++;
-                                }
+                                // Update completed count using utility function
+                                pluginApi.pluginSettings.completedCount = calculateCompletedCount();
+
+                                moveTodoToCorrectPosition(model.id);
+
+                                pluginApi.saveSettings();
+                                updateFilteredTodos();
                               }
-                              pluginApi.pluginSettings.completedCount = completedCount;
-
-                              moveTodoToCorrectPosition(model.id);
-
-                              pluginApi.saveSettings();
-                              updateFilteredTodos();
                             }
+                          }
+                        }
+                      }
+                    }
+
+                    // Priority indicator - a colored vertical line
+                    Rectangle {
+                      id: priorityIndicator
+                      width: 3  // Width of the priority line
+                      height: parent.height - scaledMarginS
+                      anchors.left: parent.left
+                      anchors.leftMargin: scaledMarginM  // Increase margin to avoid overlap with checkbox
+                      anchors.verticalCenter: parent.verticalCenter
+                      radius: 1.5
+
+                      // Determine color based on priority using helper function
+                      color: {
+                        if (pluginApi) {
+                          return getPriorityColor(model.priority || "medium");
+                        } else {
+                          // Fallback to default colors if pluginApi is not ready
+                          var priority = model.priority || "medium";
+                          if (priority === "high") {
+                            return Color.mError;
+                          } else if (priority === "low") {
+                            return Color.mOnSurfaceVariant;
+                          } else {
+                            return Color.mPrimary;
                           }
                         }
                       }

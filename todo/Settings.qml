@@ -12,6 +12,13 @@ ColumnLayout {
   property bool valueShowCompleted: pluginApi?.pluginSettings?.showCompleted !== undefined ? pluginApi.pluginSettings.showCompleted : pluginApi?.manifest?.metadata?.defaultSettings?.showCompleted
   property bool valueShowBackground: pluginApi?.pluginSettings?.showBackground !== undefined ? pluginApi.pluginSettings.showBackground : pluginApi?.manifest?.metadata?.defaultSettings?.showBackground
 
+  // Priority color properties
+  property bool valueUseCustomColors: pluginApi?.pluginSettings?.useCustomColors !== undefined ? pluginApi.pluginSettings.useCustomColors : false
+  property color valueHighPriorityColor: (pluginApi?.pluginSettings?.priorityColors?.high) || (pluginApi?.manifest?.metadata?.defaultSettings?.priorityColors?.high) || Color.mError
+  property color valueMediumPriorityColor: (pluginApi?.pluginSettings?.priorityColors?.medium) || (pluginApi?.manifest?.metadata?.defaultSettings?.priorityColors?.medium) || Color.mPrimary
+  property color valueLowPriorityColor: (pluginApi?.pluginSettings?.priorityColors?.low) || (pluginApi?.manifest?.metadata?.defaultSettings?.priorityColors?.low) || Color.mOnSurfaceVariant
+
+
   spacing: Style.marginL
 
   Component.onCompleted: {
@@ -35,6 +42,86 @@ ColumnLayout {
     checked: root.valueShowBackground
     onToggled: function (checked) {
       root.valueShowBackground = checked;
+    }
+  }
+
+  // Toggle for custom priority colors
+  NToggle {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.custom_priority_colors.label") || "Use Custom Priority Colors"
+    description: pluginApi?.tr("settings.custom_priority_colors.description") || "Enable to customize priority colors"
+    checked: root.valueUseCustomColors
+    onToggled: function (checked) {
+      root.valueUseCustomColors = checked;
+    }
+  }
+
+  // Section for priority color settings (only visible when custom colors are enabled)
+  ColumnLayout {
+    Layout.fillWidth: true
+    spacing: Style.marginS
+    visible: root.valueUseCustomColors
+
+    NText {
+      text: pluginApi?.tr("settings.priority_colors.label") || "Priority Colors"
+      font.pointSize: Style.fontSizeL
+      font.weight: Font.Bold
+      Layout.topMargin: Style.marginL
+    }
+
+    GridLayout {
+      columns: 2
+      rowSpacing: Style.marginS
+      columnSpacing: Style.marginM
+      Layout.fillWidth: true
+
+      // High priority color
+      NText {
+        text: pluginApi?.tr("settings.priority_colors.high_label") || "High Priority:"
+        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+      }
+
+      NColorPicker {
+        id: colorPickerHigh
+        Layout.preferredWidth: Style.sliderWidth
+        Layout.preferredHeight: Style.baseWidgetSize
+        selectedColor: root.valueHighPriorityColor
+        onColorSelected: function (color) {
+          root.valueHighPriorityColor = color;
+        }
+      }
+
+      // Medium priority color
+      NText {
+        text: pluginApi?.tr("settings.priority_colors.medium_label") || "Medium Priority:"
+        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+      }
+
+      NColorPicker {
+        id: colorPickerMedium
+        Layout.preferredWidth: Style.sliderWidth
+        Layout.preferredHeight: Style.baseWidgetSize
+        selectedColor: root.valueMediumPriorityColor
+        onColorSelected: function (color) {
+          root.valueMediumPriorityColor = color;
+        }
+      }
+
+      // Low priority color
+      NText {
+        text: pluginApi?.tr("settings.priority_colors.low_label") || "Low Priority:"
+        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+      }
+
+      NColorPicker {
+        id: colorPickerLow
+        Layout.preferredWidth: Style.sliderWidth
+        Layout.preferredHeight: Style.baseWidgetSize
+        selectedColor: root.valueLowPriorityColor
+        onColorSelected: function (color) {
+          root.valueLowPriorityColor = color;
+        }
+      }
     }
   }
 
@@ -417,6 +504,26 @@ ColumnLayout {
 
     pluginApi.pluginSettings.showCompleted = root.valueShowCompleted;
     pluginApi.pluginSettings.showBackground = root.valueShowBackground;
+    pluginApi.pluginSettings.useCustomColors = root.valueUseCustomColors;
+
+    // Only save custom colors if the option is enabled
+    if (root.valueUseCustomColors) {
+      // Save priority colors
+      if (!pluginApi.pluginSettings.priorityColors) {
+        pluginApi.pluginSettings.priorityColors = {};
+      }
+      pluginApi.pluginSettings.priorityColors.high = root.valueHighPriorityColor;
+      pluginApi.pluginSettings.priorityColors.medium = root.valueMediumPriorityColor;
+      pluginApi.pluginSettings.priorityColors.low = root.valueLowPriorityColor;
+    } else {
+      // If custom colors are disabled, reset to defaults
+      pluginApi.pluginSettings.priorityColors = {
+        "high": Color.mError,
+        "medium": Color.mPrimary,
+        "low": Color.mOnSurfaceVariant
+      };
+    }
+
     pluginApi.saveSettings();
 
     Logger.i("Todo", "Settings saved successfully");
