@@ -1359,132 +1359,197 @@ Item {
 
     x: (parent.width - width) / 2
     y: (parent.height - height) / 2
-    width: 550 * Style.uiScaleRatio
-    height: 350 * Style.uiScaleRatio
+    width: 500 * Style.uiScaleRatio
+    height: 300 * Style.uiScaleRatio
     modal: true
     focus: true
-    padding: Style.marginL
+    padding: 0
 
-    // Set the background with rounded corners
+    // Background
     background: Rectangle {
       color: Color.mSurface
       radius: Style.radiusL
-      border.color: Color.mOutline
-      border.width: Style.borderS
     }
 
-    // Content item with scrollable area
+    // Content
     contentItem: Item {
-      // Close dialog on Escape key
-      focus: true
-      Keys.onEscapePressed: {
-        detailDialog.close();
+      anchors.fill: parent
+
+      // Header bar
+      Rectangle {
+        id: headerBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: 44 * Style.uiScaleRatio
+        color: Color.mPrimary
+        radius: Style.radiusS
+
+        RowLayout {
+          anchors.fill: parent
+          anchors.leftMargin: Style.marginL
+          anchors.rightMargin: Style.marginM
+
+          NText {
+            text: pluginApi?.tr("panel.todo_details.title")
+            font.pointSize: Style.fontSizeM
+            font.weight: Font.Bold
+            color: Color.mOnPrimary
+            Layout.fillWidth: true
+          }
+
+          NIconButton {
+            icon: "x"
+            colorBg: Qt.rgba(1, 1, 1, 0.2)
+            colorBgHover: Qt.rgba(1, 1, 1, 0.3)
+            colorFg: Color.mOnPrimary
+            onClicked: detailDialog.close()
+          }
+        }
       }
 
-      // Scrollable content area
+      // Scrollable content (below header)
       Flickable {
-        anchors.fill: parent
-        contentWidth: parent.width
-        contentHeight: contentColumn.implicitHeight
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: headerBar.bottom
+        anchors.bottom: parent.bottom
+        contentWidth: width
+        contentHeight: contentColumn.implicitHeight + Style.marginL
         clip: true
+        boundsBehavior: Flickable.StopAtBounds
 
-        // Content column
         ColumnLayout {
           id: contentColumn
-          width: parent.width
-          anchors.margins: Style.marginS
+          anchors.fill: parent
+          anchors.leftMargin: Style.marginL
+          anchors.rightMargin: Style.marginL
+          anchors.topMargin: Style.marginM
+          anchors.bottomMargin: Style.marginM
           spacing: Style.marginM
-
-          // Header row
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.marginS
-
-            NText {
-              text: pluginApi?.tr("panel.todo_details.title")
-              font.pointSize: Style.fontSizeL
-              font.weight: Font.Bold
-              color: Color.mOnSurface
-              Layout.fillWidth: true
-            }
-
-            // Close button (keeping this as it's the main way to close the dialog)
-            NIconButton {
-              icon: "x"
-              onClicked: detailDialog.close()
-            }
-          }
 
           // Todo text
           NText {
-            text: pluginApi?.tr("panel.todo_details.label_title") + detailDialog.todoText
-            font.pointSize: Style.fontSizeM
+            text: detailDialog.todoText
+            font.pointSize: Style.fontSizeL
+            font.weight: Font.Bold
             color: Color.mOnSurface
             wrapMode: Text.Wrap
             Layout.fillWidth: true
           }
 
-          // Status
-          RowLayout {
+          // Divider
+          Rectangle {
+            height: 1
+            color: Color.mOutline
+            opacity: 0.3
+            Layout.fillWidth: true
+          }
+
+          // Details
+          ColumnLayout {
+            Layout.fillWidth: true
             spacing: Style.marginS
 
-            NText {
-              text: pluginApi?.tr("panel.todo_details.label_status")
-              font.pointSize: Style.fontSizeM
-              color: Color.mOnSurface
+            // Page ID
+            RowLayout {
+              spacing: Style.marginS
+              Layout.fillWidth: true
+
+              NText {
+                text: pluginApi?.tr("panel.todo_details.label_page_id")
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurfaceVariant
+                Layout.preferredWidth: 80 * Style.uiScaleRatio
+                Layout.alignment: Qt.AlignTop
+              }
+
+              NText {
+                text: "#" + detailDialog.todoPageId
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurface
+                Layout.alignment: Qt.AlignTop
+              }
             }
 
-            NText {
-              text: detailDialog.todoCompleted ?
-                   pluginApi?.tr("panel.todo_details.status_completed") :
-                   pluginApi?.tr("panel.todo_details.status_pending")
-              font.pointSize: Style.fontSizeM
-              color: detailDialog.todoCompleted ? Color.mPrimary : Color.mError
-              font.bold: true
-            }
-          }
+            // Status
+            RowLayout {
+              spacing: Style.marginS
+              Layout.fillWidth: true
 
-          // Created date
-          NText {
-            text: pluginApi?.tr("panel.todo_details.label_created") + new Date(detailDialog.todoCreatedAt).toLocaleString()
-            font.pointSize: Style.fontSizeM
-            color: Color.mOnSurface
-            Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            elide: Text.ElideNone
-          }
+              NText {
+                text: pluginApi?.tr("panel.todo_details.label_status")
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurfaceVariant
+                Layout.preferredWidth: 80 * Style.uiScaleRatio
+                Layout.alignment: Qt.AlignTop
+              }
 
-          // Priority
-          RowLayout {
-            spacing: Style.marginS
-
-            NText {
-              text: pluginApi?.tr("panel.todo_details.label_priority")
-              font.pointSize: Style.fontSizeM
-              color: Color.mOnSurface
+              NText {
+                text: detailDialog.todoCompleted ?
+                       pluginApi?.tr("panel.todo_details.status_completed") :
+                       pluginApi?.tr("panel.todo_details.status_pending")
+                font.pointSize: Style.fontSizeS
+                font.weight: Font.Medium
+                color: detailDialog.todoCompleted ? Color.mPrimary : Color.mError
+                Layout.alignment: Qt.AlignTop
+              }
             }
 
-            // Priority indicator
-            Rectangle {
-              width: 20
-              height: 20
-              radius: 10
-              color: root.getPriorityColor(detailDialog.todoPriority)
+            // Priority
+            RowLayout {
+              spacing: Style.marginS
+              Layout.fillWidth: true
+
+              NText {
+                text: pluginApi?.tr("panel.todo_details.label_priority")
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurfaceVariant
+                Layout.preferredWidth: 82 * Style.uiScaleRatio
+                Layout.alignment: Qt.AlignTop
+              }
+
+              RowLayout {
+                spacing: Style.marginXS
+
+                Rectangle {
+                  width: 12
+                  height: 12
+                  radius: 6
+                  color: root.getPriorityColor(detailDialog.todoPriority)
+                }
+
+                NText {
+                  text: detailDialog.todoPriority.charAt(0).toUpperCase() + detailDialog.todoPriority.slice(1)
+                  font.pointSize: Style.fontSizeS
+                  font.weight: Font.Medium
+                  color: Color.mOnSurface
+                }
+              }
             }
 
-            NText {
-              text: detailDialog.todoPriority.charAt(0).toUpperCase() + detailDialog.todoPriority.slice(1)
-              font.pointSize: Style.fontSizeM
-              color: Color.mOnSurface
-            }
-          }
+            // Created date
+            RowLayout {
+              spacing: Style.marginS
+              Layout.fillWidth: true
 
-          // Page ID
-          NText {
-            text: pluginApi?.tr("panel.todo_details.label_page_id") + detailDialog.todoPageId
-            font.pointSize: Style.fontSizeM
-            color: Color.mOnSurface
-            Layout.fillWidth: true
+              NText {
+                text: pluginApi?.tr("panel.todo_details.label_created")
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurfaceVariant
+                Layout.preferredWidth: 80 * Style.uiScaleRatio
+                Layout.alignment: Qt.AlignTop
+              }
+
+              NText {
+                text: new Date(detailDialog.todoCreatedAt).toLocaleString()
+                font.pointSize: Style.fontSizeS
+                color: Color.mOnSurface
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+              }
+            }
           }
         }
       }
