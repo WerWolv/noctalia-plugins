@@ -1231,6 +1231,9 @@ Item {
       details: ""
     });
 
+    pluginApi.pluginSettings.todos = todos;
+    pluginApi.pluginSettings.count = todos.length;
+    pluginApi.pluginSettings.completedCount = calculateCompletedCount();
     pluginApi.saveSettings();
     newTodoInput.text = "";
   }
