@@ -20,6 +20,7 @@ Item {
     required property bool isMuted
     required property string mpvSocket
     required property string profile
+    required property string fillMode
     required property real volume
 
     required property Thumbnails thumbnails
@@ -29,13 +30,35 @@ Item {
     /***************************
     * FUNCTIONS
     ***************************/
+    function buildMpvCommand() {
+        let options = [
+            `input-ipc-server='${root.mpvSocket}'`,
+            `profile='${root.profile}'`,
+            `panscan=${root.fillMode === "fit" ? 0 : 1}`,
+            "loop"
+        ];
+
+        if (root.hardwareAcceleration) {
+            options.push("hwdec=auto");
+        }
+
+        if (root.isMuted) {
+            options.push("no-audio");
+        }
+
+        const optionsString = options.join(" ");
+        const command = `mpvpaper -o "${optionsString}" ALL "${root.currentWallpaper}"`;
+
+        return ["sh", "-c", command];
+    }
+
     function activateMpvpaper() {
         Logger.d("mpvpaper", "Activating mpvpaper...");
 
         // Save the old wallpapers of the user.
         innerService.saveOldWallpapers();
 
-        mpvProc.command = ["sh", "-c", `mpvpaper -o "input-ipc-server=${root.mpvSocket} profile='${profile}' ${hardwareAcceleration ? "hwdec=auto" : ""} loop ${isMuted ? "no-audio" : ""}" ALL ${root.currentWallpaper}` ]
+        mpvProc.command = buildMpvCommand();
         mpvProc.running = true;
 
         pluginApi.pluginSettings.isPlaying = true;
@@ -148,6 +171,26 @@ Item {
         if (!root.active || !mpvProc.running) return;
 
         sendCommandToMPV(`set profile ${profile}`)
+    }
+
+    onFillModeChanged:{
+        Logger.d("mpvpaper", "Changing current fill mode");
+
+        if (!root.active || !mpvProc.running) return;
+
+        switch(fillMode){
+            case "fit":
+                sendCommandToMPV(`no-osd set panscan 0; no-osd set keepaspect yes`);
+                break;
+            case "crop":
+                sendCommandToMPV(`no-osd set panscan 1; no-osd set keepaspect yes`);
+                break;
+            case "stretch":
+                sendCommandToMPV(`no-osd set keepaspect no; no-osd set panscan 0`);
+                break;
+            default:
+                Logger.e("mpvpaper", "Error, fill mode not found:", fillMode);
+        }
     }
 
     onVolumeChanged: {

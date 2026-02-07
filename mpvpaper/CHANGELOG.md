@@ -2,6 +2,11 @@
 
 Here I'll try to document all changes for the mpvpaper plugin.
 
+## 1.6.1 - 2026-02-07
+
+- feat: Added the ability to set the fill mode.
+- feat: Added widget setting in the context menu of bar widget.
+
 ## 1.6.0 - 2026-02-06
 
 - feat: Added the ability to set the mpv profile, there is a fast profile for better optimization.

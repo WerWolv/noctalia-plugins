@@ -25,7 +25,11 @@ ColumnLayout {
         pluginApi?.pluginSettings?.profile ||
         pluginApi?.manifest?.metadata?.defaultSettings?.profile ||
         "default"
-
+    
+    property string fillMode:
+        pluginApi?.pluginSettings?.fillMode ||
+        pluginApi?.manifest?.metadata?.defaultSettings?.fillMode ||
+        "fit"
 
     // Profile
     NComboBox {
@@ -54,6 +58,32 @@ ColumnLayout {
         ]
         currentKey: root.profile
         onSelected: key => root.profile = key
+    }
+
+    // Fill Mode
+    NComboBox {
+        enabled: root.active
+        Layout.fillWidth: true
+        label: pluginApi?.tr("settings.fill_mode.label") || "Fill mode"
+        description: pluginApi?.tr("settings.fill_mode.description") || "The fill mode that mpv uses.";
+        defaultValue: "fit"
+        model: [
+            {
+                "key": "fit",
+                "name": pluginApi?.tr("settings.fill_mode.fit") || "Fit"
+            },
+            {
+                "key": "crop",
+                "name": pluginApi?.tr("settings.fill_mode.crop") || "Crop"
+            },
+            {
+                "key": "stretch",
+                "name": pluginApi?.tr("settings.fill_mode.stretch") || "Stretch"
+
+            }
+        ]
+        currentKey: root.fillMode
+        onSelected: key => root.fillMode = key
     }
 
     // Hardware Acceleration
@@ -85,6 +115,7 @@ ColumnLayout {
             root.hardwareAcceleration = root.pluginApi.pluginSettings.hardwareAcceleration || false
             root.mpvSocket = root.pluginApi.pluginSettings.mpvSocket || "/tmp/mpv-socket";
             root.profile = root.pluginApi.pluginSettings.profile || pluginApi?.manifest?.metadata?.defaultSettings?.profile || "default"
+            root.fillMode = root.pluginApi.pluginSettings.fillMode || pluginApi?.manifest?.metadata?.defaultSettings?.fillMode || "fit"
         }
     }
 
@@ -101,5 +132,6 @@ ColumnLayout {
         pluginApi.pluginSettings.hardwareAcceleration = hardwareAcceleration;
         pluginApi.pluginSettings.mpvSocket = mpvSocket;
         pluginApi.pluginSettings.profile = profile;
+        pluginApi.pluginSettings.fillMode = fillMode;
     }
 }
