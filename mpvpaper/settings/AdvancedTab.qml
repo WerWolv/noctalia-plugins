@@ -75,6 +75,11 @@ ColumnLayout {
             {
                 "key": "crop",
                 "name": pluginApi?.tr("settings.fill_mode.crop") || "Crop"
+            },
+            {
+                "key": "stretch",
+                "name": pluginApi?.tr("settings.fill_mode.stretch") || "Stretch"
+
             }
         ]
         currentKey: root.fillMode

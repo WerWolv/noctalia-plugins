@@ -177,9 +177,20 @@ Item {
         Logger.d("mpvpaper", "Changing current fill mode");
 
         if (!root.active || !mpvProc.running) return;
-        
-        const panscan = fillMode === "fit" ? 0 : 1
-        sendCommandToMPV(`no-osd set panscan ${panscan}`)
+
+        switch(fillMode){
+            case "fit":
+                sendCommandToMPV(`no-osd set panscan 0; no-osd set keepaspect yes`);
+                break;
+            case "crop":
+                sendCommandToMPV(`no-osd set panscan 1; no-osd set keepaspect yes`);
+                break;
+            case "stretch":
+                sendCommandToMPV(`no-osd set keepaspect no; no-osd set panscan 0`);
+                break;
+            default:
+                Logger.e("mpvpaper", "Error, fill mode not found:", fillMode);
+        }
     }
 
     onVolumeChanged: {

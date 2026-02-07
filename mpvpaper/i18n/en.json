@@ -74,7 +74,8 @@
       "label": "Fill mode",
       "description": "The fill mode that mpvpaper uses.",
       "fit": "Fit",
-      "crop": "Crop"
+      "crop": "Crop",
+      "stretch": "Stretch"
     },
     "automation": {
       "label": "Automation",
