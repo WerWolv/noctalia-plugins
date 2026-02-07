@@ -28,8 +28,10 @@ Item {
         let wallpapers = {};
         const oldWallpapers = WallpaperService.currentWallpapers;
         for(let screenName in oldWallpapers) {
-            // Only save the old wallpapers if it isn't the current video wallpaper.
-            if(oldWallpapers[screenName] != thumbnails.getThumbPath(root.currentWallpaper)) {
+            const thumbPath = thumbnails.getThumbPath(root.currentWallpaper);
+            // Only save the old wallpapers if it isn't the current video wallpaper, and if the cacheFolder contains the current thumbnail.
+            if(oldWallpapers[screenName] != thumbPath &&
+                thumbnails.thumbCacheFolder.includes(thumbPath)) {
                 wallpapers[screenName] = oldWallpapers[screenName];
                 changed = true;
             }

@@ -1,4 +1,4 @@
-
+pragma ComponentBehavior: Bound
 import Qt.labs.folderlistmodel
 import QtQuick
 import Quickshell
@@ -19,10 +19,11 @@ Item {
     required property bool thumbCacheReady
     required property FolderListModel folderModel
 
-    readonly property string thumbCacheFolder: ImageCacheService.wpThumbDir + "video-wallpaper"
+    readonly property string thumbCacheFolderPath: ImageCacheService.wpThumbDir + "video-wallpaper"
     property int _thumbGenIndex: 0
-    property list<string> thumbCacheFolderFiles: []
 
+    property list<string> thumbCacheFolder: []
+    property bool thumbCacheFolderReady: false
 
     /***************************
     * FUNCTIONS
@@ -45,12 +46,45 @@ Item {
     function getThumbPath(videoPath: string): string {
         const file = videoPath.split('/').pop();
 
-        return `${thumbCacheFolder}/${file}.bmp`
+        return `${thumbCacheFolderPath}/${file}.bmp`
+    }
+
+    function reloadThumbFolder() {
+        thumbCacheFolder = [];
+        thumbCacheFolderReady = false;
+        thumbCacheFolderProc.running = true;
     }
 
 
     function startColorGen() {
-        thumbColorGenTimer.start();
+        // If the thumbCacheFolderFiles aren't ready try in a bit
+        if(!root.thumbCacheFolderReady){
+            if(thumbCacheFolderProc.running) {
+                // Run the timer
+                startColorGenTimer.restart();
+            } else {
+                // Try to run the process again since the ready flag is off
+                thumbCacheFolderProc.running = true;
+            }
+        }
+
+        const thumbPath = root.getThumbPath(root.currentWallpaper);
+        if (root.thumbCacheFolder.includes(thumbPath)) {
+            Logger.d("video-wallpaper", "Generating color scheme based on video wallpaper!");
+            WallpaperService.changeWallpaper(thumbPath);
+        } else {
+            // Try to create the thumbnail again
+            // just a fail safe if the current wallpaper isn't included in the wallpapers folder
+            const videoPath = folderModel.get(root._thumbGenIndex, "filePath");
+            const thumbUrl = root.getThumbPath(videoPath);
+
+            Logger.d("video-wallpaper", "Thumbnail not found:", thumbPath);
+            thumbColorGenProc.command = ["sh", "-c", `ffmpeg -y -i ${videoPath} -vframes:v 1 ${thumbUrl}`]
+            thumbColorGenProc.running = true;
+
+            // Since we have updated the thumbnails set the thumbnails folder flag off
+            reloadThumbFolder();
+        }
     }
 
 
@@ -65,7 +99,7 @@ Item {
             const thumbPath = root.getThumbPath(videoPath);
             root._thumbGenIndex++;
             // Check if file already exists, otherwise create it with ffmpeg
-            if (root.thumbCacheFolderFiles.includes(thumbPath)) {
+            if (root.thumbCacheFolder.includes(thumbPath)) {
                 Logger.d("video-wallpaper", `Creating thumbnail for video: ${videoPath}`);
 
                 // With scale
@@ -77,8 +111,8 @@ Item {
         }
 
         // The thumbnail generation has looped over every video and finished the generation
-        thumbCacheFolderFiles = [];
-        thumbCacheFolderFilesProc.running = true;
+        // Update the thumbnail folder
+        reloadThumbFolder();
 
         root._thumbGenIndex = 0;
         setThumbCacheReady();
@@ -87,10 +121,9 @@ Item {
     function thumbRegenerate() {
         if(pluginApi == null) return;
 
-        pluginApi.pluginSettings.thumbCacheReady = false;
-        pluginApi.saveSettings();
+        clearThumbCacheReady();
 
-        thumbProc.command = ["sh", "-c", `rm -rf ${thumbCacheFolder} && mkdir -p ${thumbCacheFolder}`]
+        thumbProc.command = ["sh", "-c", `rm -rf ${thumbCacheFolderPath} && mkdir -p ${thumbCacheFolderPath}`]
         thumbProc.running = true;
     }
 
@@ -101,7 +134,7 @@ Item {
     Process {
         // Process to create the thumbnail folder
         id: thumbInit
-        command: ["sh", "-c", `mkdir -p ${root.thumbCacheFolder}`]
+        command: ["sh", "-c", `mkdir -p ${root.thumbCacheFolderPath}`]
         running: true
     }
 
@@ -117,46 +150,28 @@ Item {
     }
 
     Process {
-        id: thumbCacheFolderFilesProc
-        command: ["sh", "-c", `find ${root.thumbCacheFolder} -name "*.bmp"`]
+        id: thumbCacheFolderProc
+        command: ["sh", "-c", `find ${root.thumbCacheFolderPath} -name "*.bmp"`]
         running: true
         stdout: SplitParser {
             onRead: line => {
-                root.thumbCacheFolderFiles.push(line);
+                root.thumbCacheFolder.push(line);
             }
         }
+        onExited: root.thumbCacheFolderReady = true;
+    }
+
+    Process {
+        id: thumbColorGenProc
+        onExited: root.startColorGen();
     }
 
     Timer {
-        id: thumbColorGenTimer
+        id: startColorGenTimer
         interval: 50
         repeat: false
         running: false
         triggeredOnStart: false
-
-        onTriggered: { 
-            const thumbPath = root.getThumbPath(root.currentWallpaper);
-            if (root.thumbCacheFolderFiles.includes(thumbPath)) {
-                Logger.d("video-wallpaper", "Generating color scheme based on video wallpaper!");
-                WallpaperService.changeWallpaper(thumbPath);
-            } else {
-                // Try to create the thumbnail again
-                // just a fail safe if the current wallpaper isn't included in the wallpapers folder
-                const videoPath = folderModel.get(root._thumbGenIndex, "filePath");
-                const thumbUrl = root.getThumbPath(videoPath);
-
-                Logger.d("video-wallpaper", "Thumbnail not found:", thumbPath);
-                thumbColorGenTimerProc.command = ["sh", "-c", `ffmpeg -y -i ${videoPath} -vframes:v 1 ${thumbUrl}`]
-                thumbColorGenTimerProc.running = true;
-
-                // Restart this timer
-                thumbColorGenTimer.restart();
-            }
-        }
-    }
-
-    Process {
-        id: thumbColorGenTimerProc
-        onExited: thumbColorGenTimer.start();
+        onTriggered: root.startColorGen();
     }
 }
