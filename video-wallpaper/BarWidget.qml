@@ -58,7 +58,7 @@ Item {
                 "icon": root.isMuted ? "volume-high" : "volume-mute"
             },
             {
-                "label": root.pluginApi?.tr("barWidget.contextMenu.settings") || "Settings",
+                "label": I18n.tr("actions.widget-settings"),
                 "action": "settings",
                 "icon": "settings"
             }
