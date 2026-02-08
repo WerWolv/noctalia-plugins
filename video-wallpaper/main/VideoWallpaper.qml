@@ -60,7 +60,7 @@ Variants {
         implicitHeight: modelData.height
         visible: root.enabled && root.currentWallpaper != ""
 
-        WlrLayershell.namespace: `noctalia-video-wallpaper-${modelData.name}`
+        WlrLayershell.namespace: `noctalia-wallpaper-video-${modelData.name}`
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
