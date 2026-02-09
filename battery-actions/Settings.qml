@@ -33,6 +33,27 @@ ColumnLayout {
         onTextChanged: root.editOnBatteryScript = text
     }
 
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: Style.marginS
+        NLabel {
+            label: "Additional Environment Variables Provided"
+        }
+
+        NLabel {
+            description: "$BAT_PERCENTAGE: Battery Percentage"
+        }
+        NLabel {
+            description: "$BAT_STATE: Battery State (Charging, Discharging, Fully Charged, etc.)"
+        }
+        NLabel {
+            description: "$BAT_RATE: Battery Charge rate (in Watts)"
+        }
+        NLabel {
+            description: "$BAT_PATH: OS Battery path (/sys/class/power_supply/...)"
+        }
+    }
+
     function saveSettings() {
         pluginApi.pluginSettings.pluggedInScript = root.editPluggedInScript;
         pluginApi.pluginSettings.onBatteryScript = root.editOnBatteryScript;
