@@ -24,8 +24,8 @@ ColumnLayout {
   }
 
     NComboBox {
-      label: pluginApi?.tr("settings.customColor.label")
-      description: pluginApi?.tr("settings.customColor.desc")
+      label: pluginApi?.tr("settings.customColor.label") || "customColor"
+      description: pluginApi?.tr("settings.customColor.desc") || "Choose what color you would like the icon and text to be."
       model: Color.colorKeyModel
       currentKey: root.customColor
       onSelected: key => root.customColor = key
