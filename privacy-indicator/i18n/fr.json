@@ -37,6 +37,10 @@
   "history": {
     "title": "Historique d'accès",
     "empty": "Aucun accès récent",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "action": {
+      "started": "Démarré",
+      "stopped": "Arrêté"
+    }
   }
 }

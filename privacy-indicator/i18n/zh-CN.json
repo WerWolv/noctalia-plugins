@@ -37,6 +37,10 @@
   "history": {
     "title": "访问历史",
     "empty": "无最近访问",
-    "clear": "清除"
+    "clear": "清除",
+    "action": {
+      "started": "已开始",
+      "stopped": "已停止"
+    }
   }
 }

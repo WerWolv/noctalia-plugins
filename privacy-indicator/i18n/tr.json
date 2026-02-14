@@ -37,6 +37,10 @@
   "history": {
     "title": "Erişim Geçmişi",
     "empty": "Yakın zamanda erişim yok",
-    "clear": "Temizle"
+    "clear": "Temizle",
+    "action": {
+      "started": "Başlatıldı",
+      "stopped": "Durduruldu"
+    }
   }
 }

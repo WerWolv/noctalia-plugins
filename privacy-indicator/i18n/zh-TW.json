@@ -37,6 +37,10 @@
   "history": {
     "title": "存取紀錄",
     "empty": "無最近存取",
-    "clear": "清除"
+    "clear": "清除",
+    "action": {
+      "started": "已開始",
+      "stopped": "已停止"
+    }
   }
 }

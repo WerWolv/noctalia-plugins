@@ -37,6 +37,10 @@
   "history": {
     "title": "Access History",
     "empty": "No recent access",
-    "clear": "Clear"
+    "clear": "Clear",
+    "action": {
+      "started": "Started",
+      "stopped": "Stopped"
+    }
   }
 }

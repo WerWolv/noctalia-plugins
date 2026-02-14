@@ -37,6 +37,10 @@
   "history": {
     "title": "Toegangsgeschiedenis",
     "empty": "Geen recente toegang",
-    "clear": "Wissen"
+    "clear": "Wissen",
+    "action": {
+      "started": "Gestart",
+      "stopped": "Gestopt"
+    }
   }
 }

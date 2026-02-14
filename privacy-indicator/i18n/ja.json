@@ -37,6 +37,10 @@
   "history": {
     "title": "アクセス履歴",
     "empty": "最近のアクセスはありません",
-    "clear": "クリア"
+    "clear": "クリア",
+    "action": {
+      "started": "開始",
+      "stopped": "停止"
+    }
   }
 }

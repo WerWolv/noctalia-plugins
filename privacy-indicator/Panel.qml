@@ -119,11 +119,31 @@ Item {
                             pointSize: Style.fontSizeM
                           }
                           
-                          NText {
-                            Layout.fillWidth: true
-                            text: modelData.time
-                            color: Qt.alpha(Color.mOnSurface, 0.7)
-                            pointSize: Style.fontSizeS
+                          RowLayout {
+                              Layout.fillWidth: true
+                              spacing: Style.marginS
+                              
+                              NText {
+                                text: modelData.time
+                                color: Qt.alpha(Color.mOnSurface, 0.7)
+                                pointSize: Style.fontSizeS
+                              }
+                              
+                              NText {
+                                text: "•"
+                                color: Qt.alpha(Color.mOnSurface, 0.3)
+                                pointSize: Style.fontSizeS
+                              }
+                              
+                              NText {
+                                text: {
+                                    const action = modelData.action || "started";
+                                    return pluginApi?.tr("history.action." + action) || action;
+                                }
+                                color: modelData.action === "stopped" ? Color.mError : Color.mPrimary
+                                font.weight: Style.fontWeightBold
+                                pointSize: Style.fontSizeS
+                              }
                           }
                         }
                       }

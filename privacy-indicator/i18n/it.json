@@ -37,6 +37,10 @@
   "history": {
     "title": "Cronologia accessi",
     "empty": "Nessun accesso recente",
-    "clear": "Pulisci"
+    "clear": "Pulisci",
+    "action": {
+      "started": "Iniziato",
+      "stopped": "Terminato"
+    }
   }
 }

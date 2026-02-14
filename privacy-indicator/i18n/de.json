@@ -37,6 +37,10 @@
   "history": {
     "title": "Zugriffsverlauf",
     "empty": "Kein kürzlicher Zugriff",
-    "clear": "Leeren"
+    "clear": "Leeren",
+    "action": {
+      "started": "Gestartet",
+      "stopped": "Beendet"
+    }
   }
 }

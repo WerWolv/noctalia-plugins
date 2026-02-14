@@ -37,6 +37,10 @@
   "history": {
     "title": "Hozzáférési előzmények",
     "empty": "Nincs nemrégiben történt hozzáférés",
-    "clear": "Törlés"
+    "clear": "Törlés",
+    "action": {
+      "started": "Elindítva",
+      "stopped": "Leállítva"
+    }
   }
 }

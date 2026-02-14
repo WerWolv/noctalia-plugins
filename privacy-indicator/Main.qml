@@ -205,7 +205,7 @@ Item {
     }
   }
 
-  function addToHistory(app, type, icon, colorKey) {
+  function addToHistory(app, type, icon, colorKey, action) {
     var time = new Date().toLocaleTimeString(Qt.locale(), Locale.ShortFormat);
     var entry = {
       "appName": app,
@@ -213,10 +213,11 @@ Item {
       "icon": icon,
       "colorKey": colorKey,
       "time": time,
-      "timestamp": Date.now()
+      "timestamp": Date.now(),
+      "action": action // "started" or "stopped"
     };
     var newHistory = [entry].concat(accessHistory);
-    if (newHistory.length > 20) newHistory = newHistory.slice(0, 20);
+    if (newHistory.length > 50) newHistory = newHistory.slice(0, 50); // Increased limit as we have more entries now
     accessHistory = newHistory;
     saveHistory();
   }
@@ -226,12 +227,26 @@ Item {
       saveHistory();
   }
 
-  function checkNewApps(newApps, oldApps, type, icon, colorKey) {
-    if (!newApps) return;
-    for (var i = 0; i < newApps.length; i++) {
-        var app = newApps[i];
-        if (!oldApps || oldApps.indexOf(app) === -1) {
-            addToHistory(app, type, icon, colorKey);
+  function checkAppChanges(newApps, oldApps, type, icon, colorKey) {
+    if (!newApps && !oldApps) return;
+    
+    // Check for new apps (Started)
+    if (newApps) {
+        for (var i = 0; i < newApps.length; i++) {
+            var app = newApps[i];
+            if (!oldApps || oldApps.indexOf(app) === -1) {
+                addToHistory(app, type, icon, colorKey, "started");
+            }
+        }
+    }
+    
+    // Check for removed apps (Stopped)
+    if (oldApps) {
+        for (var j = 0; j < oldApps.length; j++) {
+            var oldApp = oldApps[j];
+            if (!newApps || newApps.indexOf(oldApp) === -1) {
+                addToHistory(oldApp, type, icon, colorKey, "stopped");
+            }
         }
     }
   }
@@ -242,7 +257,7 @@ Item {
   property string activeColorKey: cfg.activeColor ?? defaults.activeColor ?? "primary"
 
   onMicAppsChanged: {
-    checkNewApps(micApps, _prevMicApps, "Microphone", "microphone", activeColorKey);
+    checkAppChanges(micApps, _prevMicApps, "Microphone", "microphone", activeColorKey);
     _prevMicApps = micApps;
   }
   // Helper to detect activation edge
@@ -262,7 +277,7 @@ Item {
       oldCamActive = camActive
   }
   onCamAppsChanged: {
-    checkNewApps(camApps, _prevCamApps, "Camera", "camera", activeColorKey);
+    checkAppChanges(camApps, _prevCamApps, "Camera", "camera", activeColorKey);
     _prevCamApps = camApps;
   }
 
@@ -274,7 +289,7 @@ Item {
       oldScrActive = scrActive
   }
   onScrAppsChanged: {
-    checkNewApps(scrApps, _prevScrApps, "Screen", "screen-share", activeColorKey);
+    checkAppChanges(scrApps, _prevScrApps, "Screen", "screen-share", activeColorKey);
     _prevScrApps = scrApps;
   }
   
