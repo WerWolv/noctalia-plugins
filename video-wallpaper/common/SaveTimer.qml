@@ -50,6 +50,7 @@ Item {
                 root.pluginApi.pluginSettings[root.screenName][internal.key] = internal.value;
             }
 
+            root.pluginApi.saveSettings();
         }
     }
 }
