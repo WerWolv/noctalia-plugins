@@ -80,7 +80,11 @@ Item {
         mpvProc.command = buildMpvCommand();
         mpvProc.running = true;
 
-        pluginApi.pluginSettings.isPlaying[screenName] = true;
+        if(pluginApi?.pluginSettings?.[screenName] === undefined) {
+            pluginApi.pluginSettings[screenName] = {};
+        }
+
+        pluginApi.pluginSettings[screenName].isPlaying = true;
         pluginApi.saveSettings();
     }
 
@@ -105,6 +109,10 @@ Item {
     Component.onDestruction: {
         // Clean up mpvpaper
         deactivateMpvpaper();
+    }
+
+    Component.onCompleted: {
+        activateMpvpaper();
     }
 
 

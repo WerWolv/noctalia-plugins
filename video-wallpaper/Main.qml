@@ -78,20 +78,34 @@ Item {
             * EVENTS
             ***************************/
             onActiveBackendChanged: {
-                // Unload old backend and reload the new backend
-                wallpaperLoader.active = false;
-                Qt.callLater(() => {
-                    wallpaperLoader.active = true;
-                });
+                wallpaperLoaderTimer.restart();
             }
 
 
             /***************************
             * BACKEND COMPONENTS
             ***************************/
+            Timer {
+                id: wallpaperLoaderTimer
+                interval: 200
+                running: true
+                repeat: false
+                triggeredOnStart: false
+
+                onRunningChanged: {
+                    if(running) {
+                        wallpaperLoader.active = false;
+                    }
+                }
+
+                onTriggered: {
+                    wallpaperLoader.active = true;
+                }
+            }
+
             Loader {
                 id: wallpaperLoader
-                active: root.enabled && screenItem.currentWallpaper != ""
+                active: false
                 asynchronous: true
 
                 sourceComponent: {
