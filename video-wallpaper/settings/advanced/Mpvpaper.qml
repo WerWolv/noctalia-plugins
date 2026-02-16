@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
+import Quickshell
+
 import qs.Commons
 import qs.Widgets
 
@@ -13,12 +15,29 @@ ColumnLayout {
     /***************************
     * PROPERTIES
     ***************************/
+    // Required properties
     required property var pluginApi
     required property bool enabled
+    required property string selectedMonitor
 
-    property bool   hardwareAcceleration: pluginApi?.pluginSettings?.hardwareAcceleration || false
-    property string mpvSocket:            pluginApi?.pluginSettings?.mpvSocket            || pluginApi?.manifest?.metadata?.defaultSettings?.mpvSocket || ""
-    property string profile:              pluginApi?.pluginSettings?.profile              || pluginApi?.manifest?.metadata?.defaultSettings?.profile   || ""
+    // Monitor specific properties
+    property bool   hardwareAcceleration: pluginApi?.pluginSettings?.[selectedMonitor]?.hardwareAcceleration || false
+    property string profile:              pluginApi?.pluginSettings?.[selectedMonitor]?.profile              || pluginApi?.manifest?.metadata?.defaultSettings?.profile || ""
+
+    // Global properties
+    property string mpvSocket: pluginApi?.pluginSettings?.mpvSocke || pluginApi?.manifest?.metadata?.defaultSettings?.mpvSocket || ""
+
+    // Signals
+    signal saveMonitorProperty(key: string, value: var);
+
+
+    /***************************
+    * EVENTS
+    ***************************/
+    onSelectedMonitorChanged: {
+        hardwareAcceleration = pluginApi?.pluginSettings?.[selectedMonitor]?.hardwareAcceleration || false
+        profile =              pluginApi?.pluginSettings?.[selectedMonitor]?.profile              || pluginApi?.manifest?.metadata?.defaultSettings?.profile   || ""
+    }
 
 
     /***************************
@@ -79,9 +98,9 @@ ColumnLayout {
         target: root.pluginApi
         function onPluginSettingsChanged() {
             // Update the local properties on change
-            root.hardwareAcceleration = root.pluginApi?.pluginSettings?.hardwareAcceleration || false
-            root.mpvSocket =            root.pluginApi?.pluginSettings?.mpvSocket            || root.pluginApi?.manifest?.metadata?.defaultSettings?.mpvSocket || ""
-            root.profile =              root.pluginApi?.pluginSettings?.profile              || root.pluginApi?.manifest?.metadata?.defaultSettings?.profile   || ""
+            root.hardwareAcceleration = root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.hardwareAcceleration || false
+            root.mpvSocket =            root.pluginApi?.pluginSettings?.mpvSocket                                    || root.pluginApi?.manifest?.metadata?.defaultSettings?.mpvSocket || ""
+            root.profile =              root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.profile              || root.pluginApi?.manifest?.metadata?.defaultSettings?.profile   || ""
         }
     }
 
@@ -95,8 +114,9 @@ ColumnLayout {
             return;
         }
 
-        pluginApi.pluginSettings.hardwareAcceleration = hardwareAcceleration;
+        root.saveMonitorProperty("hardwareAcceleration", hardwareAcceleration);
+        root.saveMonitorProperty("profile", profile);
+
         pluginApi.pluginSettings.mpvSocket = mpvSocket;
-        pluginApi.pluginSettings.profile = profile;
     }
 }

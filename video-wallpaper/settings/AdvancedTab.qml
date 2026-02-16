@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
+import Quickshell
+
 import qs.Commons
 import qs.Widgets
 
@@ -15,14 +17,23 @@ ColumnLayout {
     /***************************
     * PROPERTIES
     ***************************/
+    // Required properties
     required property var pluginApi
+
     required property string activeBackend
     required property bool enabled
+    required property string selectedMonitor
 
-    property string fillMode: pluginApi?.pluginSettings?.fillMode    || pluginApi?.manifest?.metadata?.defaultSettings?.fill_mode || ""
-    property int orientation: pluginApi?.pluginSettings?.orientation || 0
+    // Monitor specific properties
+    property string fillMode: pluginApi?.pluginSettings?.[selectedMonitor]?.fillMode    || pluginApi?.manifest?.metadata?.defaultSettings?.fill_mode || ""
+    property int orientation: pluginApi?.pluginSettings?.[selectedMonitor]?.orientation || 0
 
+    // Constants
     readonly property list<string> backends: ["qt6-multimedia", "mpvpaper"]
+
+    // Signals
+    signal saveMonitorProperty(key: string, value: var);
+
 
     /***************************
     * COMPONENTS
@@ -73,7 +84,7 @@ ColumnLayout {
             }
 
             if(!pressed) {
-                root.pluginApi.pluginSettings.orientation = value;
+                root.saveMonitorProperty("orientation", _value);
                 root.pluginApi.saveSettings();
             }
         }
@@ -92,6 +103,9 @@ ColumnLayout {
             id: mpvpaper
             pluginApi: root.pluginApi
             enabled: root.enabled
+            selectedMonitor: root.selectedMonitor
+
+            onSaveMonitorProperty: (key, value) => root.saveMonitorProperty(key, value);
         }
 
         NoBackend {
@@ -104,8 +118,8 @@ ColumnLayout {
         target: root.pluginApi
         function onPluginSettingsChanged() {
             // Update the local properties on change
-            root.fillMode =    root.pluginApi?.pluginSettings?.fillMode    || root.pluginApi?.manifest?.metadata?.defaultSettings?.fillMode || ""
-            root.orientation = root.pluginApi?.pluginSettings?.orientation || 0
+            root.fillMode =    root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.fillMode    || root.pluginApi?.manifest?.metadata?.defaultSettings?.fillMode || ""
+            root.orientation = root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.orientation || 0
         }
     }
 
@@ -122,7 +136,7 @@ ColumnLayout {
         videoWallpaper.saveSettings();
         mpvpaper.saveSettings();
 
-        pluginApi.pluginSettings.fillMode = fillMode;
-        pluginApi.pluginSettings.orientation = orientation;
+        saveMonitorProperty("fillMode", fillMode);
+        saveMonitorProperty("orientation", orientation);
     }
 }

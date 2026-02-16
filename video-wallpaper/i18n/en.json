@@ -39,6 +39,9 @@
       }
     }
   },
+  "main": {
+    "no_backend_found": "{backend} wasn't found!"
+  },
   "panel": {
     "title": "Video wallpaper manager",
     "tool_row": {
@@ -49,6 +52,12 @@
       "refresh": {
         "text": "Refresh",
         "tooltip": "Refresh thumbnails, remove old ones and create new ones."
+      },
+      "monitor_specific": {
+        "tooltip": "Enable / disable the monitor specific setting."
+      },
+      "enabled": {
+        "label": "Enabled"
       }
     },
     "loading": "Loading...",
@@ -66,6 +75,10 @@
       "description": "What to use to render the video wallpapers.",
       "qt6_multimedia": "Qt6 Multimedia",
       "mpvpaper": "Mpvpaper"
+    },
+    "monitor_specific": {
+      "label": "Monitor specific settings",
+      "description": "Choose if you want some of the settings to apply to specific monitors. (Only available for multi-monitor setup)"
     },
     "tab_bar": {
       "general": "General",

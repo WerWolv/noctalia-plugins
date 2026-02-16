@@ -16,13 +16,31 @@ ColumnLayout {
     /***************************
     * PROPERTIES
     ***************************/
+    // Required properties
     required property var pluginApi
     required property bool enabled
+    required property string selectedMonitor
 
-    property bool      automation:           pluginApi?.pluginSettings?.automation           || false
+    // Monitor specific properties
+    property bool   automation:     pluginApi?.pluginSettings?.[selectedMonitor]?.automation     || false
+    property string automationMode: pluginApi?.pluginSettings?.[selectedMonitor]?.automationMode || pluginApi?.manifest?.metadata?.defaultSettings?.automationMode || ""
+    property real   automationTime: pluginApi?.pluginSettings?.[selectedMonitor]?.automationTime || pluginApi?.manifest?.metadata?.defaultSettings?.automationTime || 0
+    
+    // Global properties
     property list<int> automationCustomTime: pluginApi?.pluginSettings?.automationCustomTime || []
-    property string    automationMode:       pluginApi?.pluginSettings?.automationMode       || pluginApi?.manifest?.metadata?.defaultSettings?.automationMode || ""
-    property real      automationTime:       pluginApi?.pluginSettings?.automationTime       || pluginApi?.manifest?.metadata?.defaultSettings?.automationTime || 0
+    
+    // Signals
+    signal saveMonitorProperty(key: string, value: var);
+
+    /***************************
+    * EVENTS
+    ***************************/
+    onSelectedMonitorChanged: {
+        // Update the local variables
+        automation =     pluginApi?.pluginSettings?.[selectedMonitor]?.automation     || false;
+        automationMode = pluginApi?.pluginSettings?.[selectedMonitor]?.automationMode || pluginApi?.manifest?.metadata?.defaultSettings?.automationMode || "";
+        automationTime = pluginApi?.pluginSettings?.[selectedMonitor]?.automationTime || pluginApi?.manifest?.metadata?.defaultSettings?.automationTime || 0;
+    }
 
 
     /***************************
@@ -295,10 +313,9 @@ ColumnLayout {
         target: root.pluginApi
         function onPluginSettingsChanged() {
             // Update the local properties on change
-            root.automation =           root.pluginApi?.pluginSettings?.automation           || false
-            root.automationCustomTime = root.pluginApi?.pluginSettings?.automationCustomTime || []
-            root.automationMode =       root.pluginApi?.pluginSettings?.automationMode       || root.pluginApi?.manifest?.metadata?.defaultSettings?.automationMode || ""
-            root.automationTime =       root.pluginApi?.pluginSettings?.automationTime       || root.pluginApi?.manifest?.metadata?.defaultSettings?.automationTime || 0
+            root.automation =     root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.automation     || false;
+            root.automationMode = root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.automationMode || root.pluginApi?.manifest?.metadata?.defaultSettings?.automationMode || "";
+            root.automationTime = root.pluginApi?.pluginSettings?.[root.selectedMonitor]?.automationTime || root.pluginApi?.manifest?.metadata?.defaultSettings?.automationTime || 0;
         }
     }
 
@@ -312,9 +329,10 @@ ColumnLayout {
             return;
         }
 
-        pluginApi.pluginSettings.automation = automation;
+        saveMonitorProperty("automation", automation);
+        saveMonitorProperty("automationMode", automationMode);
+        saveMonitorProperty("automationTime", automationTime);
+
         pluginApi.pluginSettings.automationCustomTime = automationCustomTime;
-        pluginApi.pluginSettings.automationMode = automationMode;
-        pluginApi.pluginSettings.automationTime = automationTime;
     }
 }

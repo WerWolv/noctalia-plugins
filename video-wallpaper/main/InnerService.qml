@@ -13,13 +13,21 @@ Item {
     /***************************
     * PROPERTIES
     ***************************/
-    readonly property string currentWallpaper: pluginApi?.pluginSettings?.currentWallpaper || ""
-    readonly property bool   enabled:          pluginApi?.pluginSettings?.enabled          || false
-    readonly property var    oldWallpapers:    pluginApi?.pluginSettings?.oldWallpapers    || ({})
+    // Required properties
+    required property string screenName
 
-    required property var getThumbPath
+    required property var         getThumbPath
     required property FolderModel thumbFolderModel
 
+    // Monitor specific properties
+    readonly property string currentWallpaper:  pluginApi?.pluginSettings?.[screenName]?.currentWallpaper  || ""
+    readonly property string noctaliaWallpaper: pluginApi?.pluginSettings?.[screenName]?.noctaliaWallpaper || ""
+
+    // Global properties
+    readonly property bool enabled:         pluginApi?.pluginSettings?.enabled         || false
+    readonly property bool thumbCacheReady: pluginApi?.pluginSettings?.thumbCacheReady || false
+
+    // Signals
     signal oldWallpapersSaved
 
 
@@ -27,34 +35,30 @@ Item {
     * FUNCTIONS
     ***************************/
     function saveOldWallpapers() {
-        Logger.d("video-wallpaper", "Saving old wallpapers.");
+        if (pluginApi == null || saveTimer.running) return;
 
-        let changed = false;
-        let wallpapers = {};
-        const oldWallpapers = WallpaperService.currentWallpapers;
-        for(let screenName in oldWallpapers) {
-            const thumbPath = getThumbPath(root.currentWallpaper);
-            const oldWallpaper = oldWallpapers[screenName];
-            // Only save the old wallpapers if it isn't the current video wallpaper, and if the thumbnail folder doesn't know of it.
-            if(oldWallpaper != thumbPath && thumbFolderModel.indexOf(oldWallpaper) === -1) {
-                wallpapers[screenName] = oldWallpapers[screenName];
-            }
+        if (!thumbCacheReady || !thumbFolderModel.ready) {
+            Qt.callLater(saveOldWallpapers);
+            return;
         }
 
-        if(Object.keys(wallpapers).length != 0) {
-            pluginApi.pluginSettings.oldWallpapers = wallpapers;
-            pluginApi.saveSettings();
+        const noctaliaWallpaper = WallpaperService.currentWallpapers[root.screenName];
+
+        // Check if the wallpaper name is VERY similar to how the thumbnail generation works,
+        // aka if the last characters are ".extension.bmp", in that case just don't do anything, just as a fail safe.
+        const videoExtension = currentWallpaper.split(".").pop();
+        const isSimilarToThumbnailGen = noctaliaWallpaper.slice(-8) === `.${videoExtension}.bmp`;
+
+        if (thumbFolderModel.indexOf(noctaliaWallpaper) === -1 && !isSimilarToThumbnailGen) {
+            saveTimer.save("noctaliaWallpaper", noctaliaWallpaper);
         }
 
         oldWallpapersSaved();
     }
 
     function applyOldWallpapers() {
-        Logger.d("video-wallpaper", "Applying the old wallpapers.");
-
-        for (let screenName in oldWallpapers) {
-            WallpaperService.changeWallpaper(oldWallpapers[screenName], screenName);
-        }
+        WallpaperService.changeWallpaper(noctaliaWallpaper, screenName);
+        Logger.d("video-wallpaper", "Applying the old wallpapers...");
     }
 
 
@@ -62,21 +66,35 @@ Item {
     * EVENTS
     ***************************/
     onCurrentWallpaperChanged: {
+        if (pluginApi == null) return;
+
         if (root.enabled && root.currentWallpaper != "") {
-            saveOldWallpapers();
+            root.saveOldWallpapers();
         } else {
-            applyOldWallpapers();
+            root.applyOldWallpapers();
         }
     }
+
     onEnabledChanged: {
+        if (pluginApi == null) return;
+
         if (root.enabled && root.currentWallpaper != "") {
-            saveOldWallpapers();
+            root.saveOldWallpapers();
         } else {
-            applyOldWallpapers();
+            root.applyOldWallpapers();
         }
     }
 
     Component.onDestruction: {
         applyOldWallpapers();
+    }
+
+    /***************************
+    * COMPONENTS
+    ***************************/
+    SaveTimer {
+        id: saveTimer
+        pluginApi: root.pluginApi
+        screenName: root.screenName
     }
 }

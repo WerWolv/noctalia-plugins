@@ -16,17 +16,19 @@ Item {
     /***************************
     * PROPERTIES
     ***************************/
-    readonly property string currentWallpaper: pluginApi?.pluginSettings?.currentWallpaper || ""
-    readonly property bool   enabled:          pluginApi?.pluginSettings?.enabled          || false
-    readonly property bool   thumbCacheReady:  pluginApi?.pluginSettings?.thumbCacheReady  || false
-    readonly property string wallpapersFolder: pluginApi?.pluginSettings?.wallpapersFolder || pluginApi?.manifest?.metadata?.defaultSettings?.wallpapersFolder || ""
-
+    // Required properties
     required property var    getThumbPath
     required property string thumbCacheFolderPath
 
     required property FolderModel folderModel
     required property FolderModel thumbFolderModel
 
+    // Global properties
+    readonly property bool   enabled:          pluginApi?.pluginSettings?.enabled          || false
+    readonly property bool   thumbCacheReady:  pluginApi?.pluginSettings?.thumbCacheReady  || false
+    readonly property string wallpapersFolder: pluginApi?.pluginSettings?.wallpapersFolder || pluginApi?.manifest?.metadata?.defaultSettings?.wallpapersFolder || ""
+
+    // Local properties
     property bool oldWallpapersSaved: false
     property int  _thumbGenIndex: 0
 
@@ -46,31 +48,6 @@ Item {
             pluginApi.pluginSettings.thumbCacheReady = true;
             pluginApi.saveSettings();
         }
-    }
-
-
-    function startColorGen() {
-        // If the folder model isn't ready, or we are still regenerating a thumbnail, or the old wallpapers haven't saved yet, try in a bit
-        if(!thumbFolderModel.ready || startColorGenProc.running || !oldWallpapersSaved){
-            Qt.callLater(startColorGen);
-            return;
-        }
-
-        const thumbPath = root.getThumbPath(currentWallpaper);
-        if (thumbFolderModel.indexOf(thumbPath) !== -1) {
-            Logger.d("video-wallpaper", "Generating color scheme based on video wallpaper!");
-            WallpaperService.changeWallpaper(thumbPath);
-        } else {
-            // Try to create the thumbnail again
-            // just a fail safe if the current wallpaper isn't included in the wallpapers folder
-            Logger.d("video-wallpaper", "Thumbnail not found:", thumbPath);
-            startColorGenProc.command = ["sh", "-c", `ffmpeg -y -i "${currentWallpaper}" -vframes:v 1 "${thumbPath}"`]
-            startColorGenProc.running = true;
-            return;
-        }
-
-        // Reset the flag
-        oldWallpapersSaved = false;
     }
 
     function thumbGeneration() {
@@ -122,18 +99,6 @@ Item {
     /***************************
     * EVENTS
     ***************************/
-    onCurrentWallpaperChanged: {
-        if (root.enabled && root.currentWallpaper != "") {
-            root.startColorGen();
-        }
-    }
-
-    onEnabledChanged: {
-        if (root.enabled && root.currentWallpaper != "") {
-            root.startColorGen();
-        }
-    }
-
     onWallpapersFolderChanged: {
         root.thumbGeneration();
     }
@@ -163,14 +128,6 @@ Item {
             // Reload the thumbFolder first
             root.thumbFolderModel.forceReload();
             root.thumbGeneration();
-        }
-    }
-
-    Process {
-        id: startColorGenProc
-        onExited: {
-            // When finished recreating the thumbnail, try to apply the colors again
-            root.startColorGen();
         }
     }
 }
